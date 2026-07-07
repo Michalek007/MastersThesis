@@ -3157,6 +3157,12 @@
 		(uuid "839f7ef4-be95-4d10-9229-497223aafeda")
 	)
 	(junction
+		(at 86.36 180.34)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "92347dc7-55f2-43b6-8744-81367ca296f3")
+	)
+	(junction
 		(at 39.37 29.21)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3191,12 +3197,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "bb788590-3423-47ea-9190-2e0ef4a84203")
-	)
-	(junction
-		(at 86.36 180.34)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "cd1de233-fd39-44b7-bd42-e3e5f098b508")
 	)
 	(junction
 		(at 76.2 173.99)
@@ -3842,6 +3842,16 @@
 	)
 	(wire
 		(pts
+			(xy 83.82 180.34) (xy 86.36 180.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "916816d1-2140-4ef3-bfc4-80f8b0bba322")
+	)
+	(wire
+		(pts
 			(xy 179.07 39.37) (xy 173.99 39.37)
 		)
 		(stroke
@@ -3969,16 +3979,6 @@
 			(type default)
 		)
 		(uuid "be73a360-4222-4371-9830-8f834901dddd")
-	)
-	(wire
-		(pts
-			(xy 83.82 180.34) (xy 86.36 180.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bfd10f82-bf1c-40f9-bab8-aba346ed1d55")
 	)
 	(wire
 		(pts
@@ -7229,16 +7229,16 @@
 	)
 	(symbol
 		(lib_id "MagneticSensors:FDC6333C")
-		(at 83.82 175.26 180)
+		(at 83.82 185.42 0)
+		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "283bc018-6431-45d1-ade1-65692b5b296c")
 		(property "Reference" "Q1"
-			(at 72.39 179.0699 0)
+			(at 72.39 181.6101 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7247,7 +7247,7 @@
 			)
 		)
 		(property "Value" "FDC6333C"
-			(at 72.39 181.6099 0)
+			(at 72.39 179.0701 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7256,7 +7256,7 @@
 			)
 		)
 		(property "Footprint" "MagneticSensors:SOT95P275X110-6N"
-			(at 83.82 175.26 0)
+			(at 83.82 185.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7265,7 +7265,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 83.82 175.26 0)
+			(at 83.82 185.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7274,7 +7274,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 83.82 175.26 0)
+			(at 83.82 185.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
