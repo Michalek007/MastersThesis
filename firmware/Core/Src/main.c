@@ -21,15 +21,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "samples.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct {
-	uint32_t sync;
-	uint8_t data[UART_TX_BUF_SIZE];
-} UartPacket;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -39,6 +36,13 @@ typedef struct {
 #define P 2
 #define DATA_SIZE 1600 / OVR / 2
 #define UART_TX_BUF_SIZE DATA_SIZE * 2
+#define UART_RX_BUF_SIZE 2
+#define SAMPLES_PER_SECOND 10000
+
+typedef struct {
+	uint32_t sync;
+	uint8_t data[UART_TX_BUF_SIZE];
+} UartPacket;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,6 +54,10 @@ typedef struct {
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+DAC_HandleTypeDef hdac1;
+DMA_HandleTypeDef hdma_dac1_ch1;
+
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart3;
@@ -66,6 +74,8 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_DAC1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -73,11 +83,16 @@ static void MX_USART3_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint16_t adcBuffer[RAW_DATA_SIZE];
-uint8_t uartTxBuffer[DATA_SIZE];
+uint8_t uartTxBuffer[UART_TX_BUF_SIZE];
+uint8_t uartRxBuffer[UART_RX_BUF_SIZE];
 
 volatile uint16_t uartTxIndex = 0;
 volatile uint8_t uartTxBusy = 0;
 volatile uint8_t uartTxRequest = 0;
+volatile uint8_t uartRxReceived = 0;
+
+//UartPacket uartPacket = {.sync== 0xDEADBEEF};
+//= 0xDEADBEEF
 /* USER CODE END 0 */
 
 /**
@@ -111,15 +126,27 @@ int main(void) {
 	MX_ADC1_Init();
 	MX_TIM3_Init();
 	MX_USART3_UART_Init();
+	MX_DAC1_Init();
+	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET_LINEARITY, ADC_SINGLE_ENDED);
 	HAL_Delay(1000);
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
-	HAL_TIM_Base_Start(&htim3);
+
+	HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
+
+	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) sine50hz, 1000, DAC_ALIGN_12B_R);
+	HAL_TIM_Base_Start(&htim2);
+
+//	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
+//	HAL_TIM_Base_Start(&htim3);
+
+//	HAL_TIM_Base_Stop(&htim3);
+//	HAL_ADC_Stop_DMA(&hadc1);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+	volatile uint32_t n_samples = 0;
 	while (1) {
 		/* USER CODE END WHILE */
 
@@ -129,6 +156,22 @@ int main(void) {
 			uartTxBusy = 1;
 			HAL_UART_Transmit_DMA(&huart3, uartTxBuffer, UART_TX_BUF_SIZE);
 			HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+			n_samples -= DATA_SIZE;
+			if (n_samples == 0) {
+				HAL_TIM_Base_Stop(&htim3);
+				HAL_ADC_Stop_DMA(&hadc1);
+				HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
+				HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
+			}
+		}
+		if (uartRxReceived) {
+			if (uartRxBuffer[0] == 'S') {
+				n_samples = uartRxBuffer[1] * SAMPLES_PER_SECOND;
+
+				HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
+				HAL_TIM_Base_Start(&htim3);
+				uartRxReceived = 0;
+			}
 		}
 	}
 	/* USER CODE END 3 */
@@ -251,6 +294,87 @@ static void MX_ADC1_Init(void) {
 }
 
 /**
+ * @brief DAC1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_DAC1_Init(void) {
+
+	/* USER CODE BEGIN DAC1_Init 0 */
+
+	/* USER CODE END DAC1_Init 0 */
+
+	DAC_ChannelConfTypeDef sConfig = { 0 };
+
+	/* USER CODE BEGIN DAC1_Init 1 */
+
+	/* USER CODE END DAC1_Init 1 */
+
+	/** DAC Initialization
+	 */
+	hdac1.Instance = DAC1;
+	if (HAL_DAC_Init(&hdac1) != HAL_OK) {
+		Error_Handler();
+	}
+
+	/** DAC channel OUT1 config
+	 */
+	sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
+	sConfig.DAC_Trigger = DAC_TRIGGER_T2_TRGO;
+	sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+	sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
+	sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
+	if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_1) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN DAC1_Init 2 */
+
+	/* USER CODE END DAC1_Init 2 */
+
+}
+
+/**
+ * @brief TIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM2_Init(void) {
+
+	/* USER CODE BEGIN TIM2_Init 0 */
+
+	/* USER CODE END TIM2_Init 0 */
+
+	TIM_ClockConfigTypeDef sClockSourceConfig = { 0 };
+	TIM_MasterConfigTypeDef sMasterConfig = { 0 };
+
+	/* USER CODE BEGIN TIM2_Init 1 */
+
+	/* USER CODE END TIM2_Init 1 */
+	htim2.Instance = TIM2;
+	htim2.Init.Prescaler = 0;
+	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim2.Init.Period = 1279;
+	htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+		Error_Handler();
+	}
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+		Error_Handler();
+	}
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN TIM2_Init 2 */
+
+	/* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
  * @brief TIM3 Initialization Function
  * @param None
  * @retval None
@@ -349,6 +473,9 @@ static void MX_DMA_Init(void) {
 	/* DMA1_Stream1_IRQn interrupt configuration */
 	HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+	/* DMA1_Stream2_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
 
 }
 
@@ -506,7 +633,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart->Instance == USART3) {
-
+		uartRxReceived = 1;
 	}
 }
 /* USER CODE END 4 */
