@@ -21,9 +21,9 @@ class CurrentSource:
 
 
 class HelmholtzCoil:
-    def __init__(self, current_source):
-        self.n = 45
-        self.R = (8 + 0.4 + 0.2) / 100
+    def __init__(self, n, R, current_source):
+        self.n = n
+        self.R = R
         self.B_max = self.B(current_source.I_max)
         self.B_res = self.B(current_source.I_res)
         self.B_S = self.B_max / current_source.I_max
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     dac = DAC(vcc=3.3, resolution_bits=12)
     current_source = CurrentSource(R=7.5, DAC=dac)
-    helmholtz_coil = HelmholtzCoil(current_source)
+    helmholtz_coil = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
     print("B (200mA)", helmholtz_coil.B(0.2) * 1e6, " uT")
     print("S_B ", helmholtz_coil.B_S * 1e6/1e3, " uT/mA")
     print("S_I ", helmholtz_coil.I_S * 1e3/1e6, " mA/uT")

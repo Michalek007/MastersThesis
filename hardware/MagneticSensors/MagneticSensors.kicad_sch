@@ -2479,7 +2479,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Regulator_Linear:MIC5219-5.0YM5"
+		(symbol "Regulator_Linear:SPX3819M5-L-5-0"
 			(pin_names
 				(offset 0.254)
 			)
@@ -2494,7 +2494,7 @@
 					)
 				)
 			)
-			(property "Value" "MIC5219-5.0YM5"
+			(property "Value" "SPX3819M5-L-5-0"
 				(at 0 5.715 0)
 				(effects
 					(font
@@ -2512,7 +2512,7 @@
 					(hide yes)
 				)
 			)
-			(property "Datasheet" "http://ww1.microchip.com/downloads/en/DeviceDoc/MIC5219-500mA-Peak-Output-LDO-Regulator-DS20006021A.pdf"
+			(property "Datasheet" "https://www.exar.com/content/document.ashx?id=22106&languageid=1033&type=Datasheet&partnumber=SPX3819&filename=SPX3819.pdf&part=SPX3819"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2521,7 +2521,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "500mA low dropout linear regulator, fixed 5.0V output, SOT-23-5"
+			(property "Description" "500mA Low drop-out regulator, Fixed Output 5.0V, SOT-23-5"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2530,7 +2530,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "500mA ultra-low-noise LDO linear voltage regulator fixed positive"
+			(property "ki_keywords" "REGULATOR LDO 5.0V"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2548,7 +2548,7 @@
 					(hide yes)
 				)
 			)
-			(symbol "MIC5219-5.0YM5_0_1"
+			(symbol "SPX3819M5-L-5-0_0_1"
 				(rectangle
 					(start -5.08 4.445)
 					(end 5.08 -5.08)
@@ -2561,7 +2561,7 @@
 					)
 				)
 			)
-			(symbol "MIC5219-5.0YM5_1_1"
+			(symbol "SPX3819M5-L-5-0_1_1"
 				(pin power_in line
 					(at -7.62 2.54 0)
 					(length 2.54)
@@ -9085,7 +9085,7 @@
 				)
 			)
 		)
-		(property "Value" "470p"
+		(property "Value" "10n"
 			(at 59.944 36.83 0)
 			(effects
 				(font
@@ -9892,7 +9892,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2u"
+		(property "Value" "10u"
 			(at 70.104 36.83 0)
 			(effects
 				(font
@@ -10204,83 +10204,6 @@
 			(project "MagneticSensors"
 				(path "/3646e39c-1b14-42f3-b798-931236e9de7f"
 					(reference "#PWR059")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Regulator_Linear:MIC5219-5.0YM5")
-		(at 50.8 31.75 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "96e6bfae-c1f4-40fb-95d4-419d4bc3568c")
-		(property "Reference" "U1"
-			(at 50.8 22.86 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "MIC5219-5.0YM5"
-			(at 50.8 25.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-5"
-			(at 50.8 23.495 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "http://ww1.microchip.com/downloads/en/DeviceDoc/MIC5219-500mA-Peak-Output-LDO-Regulator-DS20006021A.pdf"
-			(at 50.8 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "500mA low dropout linear regulator, fixed 5.0V output, SOT-23-5"
-			(at 50.8 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "4"
-			(uuid "4239b1db-a6ee-47c1-9cb7-9568c24ad749")
-		)
-		(pin "1"
-			(uuid "3112ef64-38eb-4443-8f0a-e37f0d4107ba")
-		)
-		(pin "3"
-			(uuid "2dd84792-23e7-4ddd-a032-6c7bc228d780")
-		)
-		(pin "5"
-			(uuid "3500e535-9c32-4f60-853f-38ce79a173b9")
-		)
-		(pin "2"
-			(uuid "d96c91ec-c676-40af-8062-e2bf360d05fd")
-		)
-		(instances
-			(project ""
-				(path "/3646e39c-1b14-42f3-b798-931236e9de7f"
-					(reference "U1")
 					(unit 1)
 				)
 			)
@@ -12165,6 +12088,83 @@
 			(project "MagneticSensors"
 				(path "/3646e39c-1b14-42f3-b798-931236e9de7f"
 					(reference "C21")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Regulator_Linear:SPX3819M5-L-5-0")
+		(at 50.8 31.75 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d242f903-7d35-4bef-8c47-69c5929d11a4")
+		(property "Reference" "U1"
+			(at 50.8 22.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SPX3819M5-L-5-0"
+			(at 50.8 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-5"
+			(at 50.8 23.495 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.exar.com/content/document.ashx?id=22106&languageid=1033&type=Datasheet&partnumber=SPX3819&filename=SPX3819.pdf&part=SPX3819"
+			(at 50.8 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "500mA Low drop-out regulator, Fixed Output 5.0V, SOT-23-5"
+			(at 50.8 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "5a597897-058f-4987-a7fd-94e7c6798945")
+		)
+		(pin "1"
+			(uuid "4cc90885-14a0-499d-99bc-e70b0bf9381e")
+		)
+		(pin "2"
+			(uuid "4a23ab80-6ef6-4f92-84d5-50ab8b8404ac")
+		)
+		(pin "4"
+			(uuid "ae848ecf-3ad9-4500-a64c-0bf8ac80f18b")
+		)
+		(pin "3"
+			(uuid "f3a3b837-464c-4e8e-97b9-7b66c9db7c4a")
+		)
+		(instances
+			(project ""
+				(path "/3646e39c-1b14-42f3-b798-931236e9de7f"
+					(reference "U1")
 					(unit 1)
 				)
 			)
