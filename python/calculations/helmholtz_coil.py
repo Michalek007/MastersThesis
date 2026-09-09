@@ -1,16 +1,11 @@
+from .converter import DAC
+
 import math
 
 
 class Constants:
     u_0 = 4 * math.pi * 1e-7
     c = (4 / 5) ** (3 / 2)
-
-
-class DAC:
-    def __init__(self, resolution_bits, vcc):
-        self.Res_bits = resolution_bits
-        self.Vcc = vcc
-        self.Lsb = self.Vcc/(2**self.Res_bits)
 
 
 class CurrentSource:

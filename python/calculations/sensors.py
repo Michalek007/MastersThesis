@@ -1,17 +1,10 @@
+from converter import ADC
+
+
 class Constants:
     Vcc = 5
     B_max = 200e-6
     B_min = -B_max
-
-
-class ADC:
-    def __init__(self, resolution_bits, vcc):
-        self.Res_bits = resolution_bits
-        self.Vcc = vcc
-
-    @property
-    def Lsb(self):
-        return self.Vcc/(2**self.Res_bits)
 
 
 class Sensor:
