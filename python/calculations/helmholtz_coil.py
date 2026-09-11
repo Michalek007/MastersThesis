@@ -1,4 +1,4 @@
-from .converter import DAC
+from calculations.converter import DAC
 
 import math
 

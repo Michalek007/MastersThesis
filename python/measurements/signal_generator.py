@@ -1,6 +1,15 @@
+from measurements.fft import FFT
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from enum import Enum
+
+
+class Signal(Enum):
+    SINUS = 0
+    SQUARE_WAVE = 1
+    TRIANGULAR_WAVE = 2
 
 
 class SignalGenerator:
@@ -12,124 +21,69 @@ class SignalGenerator:
         self.signal = np.zeros_like(self.t)
 
     def generate_harmonics(self):
-        # self.signal = np.zeros_like(t)
         for harmonic, amplitude in self.harmonics_dict.items():
             self.signal += amplitude * np.sin(2 * np.pi * harmonic * self.t)
+
+    def generate_square_wave(self, freq=50):
+        period = 1.0 / freq
+        self.signal = np.where(self.t * period < (period / 2), 1.0, 0.0)
+
+    def generate_triangular_wave(self, freq=50):
+        phase = (self.t * 2) % 2
+        self.signal = np.where(phase < 1, phase, 2 - phase)
 
     def normalize(self):
         self.signal -= np.min(self.signal)
         self.signal /= np.max(self.signal)
-        # self.signal /= self.signal[0]
+        # self.signal /= self.harmonics_dict[1]
 
     def save(self):
         self.signal.astype(np.float32).tofile(self.filename)
         print(f"--- Zapisano {len(self.signal)} próbek do pliku: {self.filename} ---")
 
-    def plot(self, amp=1, y_label="Amplituda"):
+    def plot(self, amp=1, freq=50, y_label="Amplituda"):
         plt.figure(figsize=(10, 5))
-        plt.plot(self.t*1/50, self.signal*amp)
+        plt.plot(self.t * 1/freq, self.signal*amp)
         plt.title(self.filename)
         plt.xlabel("Czas [s]")
         plt.ylabel(y_label)
         plt.grid(True)
         plt.show()
 
-    def generate(self):
-        self.generate_harmonics()
+    def generate(self, signal_type: Signal = Signal.SINUS):
+        if signal_type == Signal.SINUS:
+            self.generate_harmonics()
+        elif signal_type == Signal.SQUARE_WAVE:
+            self.generate_square_wave()
+        elif signal_type == Signal.TRIANGULAR_WAVE:
+            self.generate_triangular_wave()
+        else:
+            raise NotImplementedError()
+
+        fft = FFT(self.signal, sampling_rate=self.n_samples)
+        fft.calculate()
+        fft.plot_fft(x_scale=50, x_lim=2500)
+
         self.normalize()
         self.plot()
         self.save()
 
 
-# class SquareWave(SignalGenerator):
-#     def generate_square_signal(self, freq):
-#         # # 1. Configuration
-#         # SAMPLES = 1000  # Number of points in one period (defines resolution)
-#         # FREQ = 50  # Frequency in Hz
-#         # PERIOD = 1.0 / FREQ
-#         #
-#         # # Create a time array for exactly one period of a 50 Hz signal
-#         # t = np.linspace(0, PERIOD, SAMPLES, endpoint=False)
-#
-#         # 2. Generate the waveform (Square Wave)
-#         # A square wave is high (1.0) for the first half of the period, and low (0.0) for the second half
-#         self.signal = np.where(t < (1/freq * self.n_samples/50e3 / 2), 1.0, 0.0)
-
-
-def generate_harmonics(t, harmonics_dict):
-    """
-    Generuje sygnał na podstawie słownika harmonicznych.
-    :param t: tablica czasu
-    :param harmonics_dict: słownik, gdzie klucz to numer harmonicznej, a wartość to amplituda
-    """
-    signal = np.zeros_like(t)
-    for harmonic, amplitude in harmonics_dict.items():
-        signal += amplitude * np.sin(2 * np.pi * harmonic * t)
-    return signal
-
-
-def normalize_signal(signal):
-    """
-    Normalizuje sygnał, przesuwając go nad zero i skalując do zakresu 0.0 - 1.0.
-    """
-    signal_shifted = signal - np.min(signal)
-    signal_normalized = signal_shifted / np.max(signal_shifted)
-    return signal_normalized
-
-
-def save_to_bin(signal, filename):
-    """
-    Zapisuje sygnał do pliku binarnego (jako 32-bitowe liczby float).
-    """
-    signal.astype(np.float32).tofile(filename)
-    print(f"--- Zapisano {len(signal)} próbek (0.0 - 1.0) do pliku: {filename} ---")
-
-
-def plot_signal(t, signal, title):
-    """
-    Wyświetla wykres podanego sygnału.
-    """
-    plt.figure(figsize=(10, 5))
-    plt.plot(t, signal)
-    plt.title(title)
-    plt.xlabel("Czas [s]")
-    plt.ylabel("Amplituda (0.0 - 1.0)")
-    plt.grid(True)
-    plt.show()
-
-
-# =========================================================================
-
 if __name__ == '__main__':
-    # Konfiguracja globalna
     SAMPLES = 1000
-    t = np.linspace(0, 1, SAMPLES, endpoint=False)
-
-    # --- 1. Sygnał: harmoniczne nieparzyste ---
     harmonics_1 = {
-        1: 1.0,  # Podstawowa
-        3: 0.33,  # 3. harmoniczna
-        5: 0.20  # 5. harmoniczna
+        1: 1.0,
+        3: 0.33,
+        5: 0.20
     }
-
-    signal_1 = generate_harmonics(t, harmonics_1)
-    signal_1_norm = normalize_signal(signal_1)
-
-    save_to_bin(signal_1_norm, "data\\signal_odd_harmonics.bin")
-    plot_signal(t, signal_1_norm, "Sygnał 1: Harmoniczne nieparzyste (0.0 - 1.0)")
-
-    # --- 2. Sygnał: harmoniczne parzyste ---
     harmonics_2 = {
-        1: 1.0,  # Podstawowa
-        2: 0.50,  # 2. harmoniczna
-        4: 0.25  # 4. harmoniczna
+        1: 1.0,
+        2: 0.50,
+        4: 0.25
     }
-
-    signal_2 = generate_harmonics(t, harmonics_2)
-    signal_2_norm = normalize_signal(signal_2)
-
-    save_to_bin(signal_2_norm, "data\\signal_even_harmonics.bin")
-    plot_signal(t, signal_2_norm, "Sygnał 2: Harmoniczne parzyste (0.0 - 1.0)")
-
+    harmonics_3 = {i: 0.75 if i % 2 else 0.0 for i in range(1, 50)}
     SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_1, filename=Path("data/signal_odd_harmonics.bin")).generate()
     SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_2, filename=Path("data/signal_even_harmonics.bin")).generate()
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/square_wave.bin")).generate(signal_type=Signal.SQUARE_WAVE)
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/triangular_wave.bin")).generate(signal_type=Signal.TRIANGULAR_WAVE)
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_3, filename=Path("data/harmonics_3.bin")).generate()

@@ -1,4 +1,4 @@
-from converter import ADC
+from calculations.converter import ADC
 
 
 class Constants:
