@@ -1,5 +1,6 @@
 from measurements.fft import FFT
 from measurements.signal_analyzer import SignalAnalyzer
+from measurements.uart import DataReader
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
@@ -21,57 +22,6 @@ class Config:
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
     DATA_FILE = "data/uart_capture.bin"
-
-
-class DataReader:
-    def __init__(self, filename: Path):
-        self.filename = filename
-        self.count = None
-        self.values = None
-        self.x = None
-
-    def read(self):
-        with open(self.filename, "rb") as f:
-            raw = f.read()
-
-        self.count = len(raw) // 2
-        self.values = struct.unpack(f">{self.count}H", raw)
-        self.x = [i for i in range(self.count)]
-
-        print(f"Loaded {self.count} samples")
-
-    def plot(self, periods=10):
-        plt.figure()
-        plt.plot(self.x[0:int(Config.SAMPLES_PER_PERIOD*periods)], self.values[0:int(Config.SAMPLES_PER_PERIOD*periods)])
-        plt.title("Raw data")
-        plt.xlabel("Sample index")
-        plt.ylabel("Value")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_scatter(self, periods=10):
-        plt.figure()
-        plt.scatter(self.x[0:int(Config.SAMPLES_PER_PERIOD*periods)], self.values[0:int(Config.SAMPLES_PER_PERIOD*periods)], s=0.5)
-        plt.title("Raw data")
-        plt.xlabel("Sample index")
-        plt.ylabel("Value")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-    def plot_histogram(self, bins=100):
-        plt.figure()
-        plt.hist(self.values, bins=bins)
-        plt.xlabel("Value")
-        plt.ylabel("Frequency")
-        plt.title("Histogram of Variable Values")
-        plt.show()
-
-    def fft(self):
-        fft = FFT(signal=self.values, sampling_rate=Config.SAMPLING_RATE)
-        fft.calculate()
-        fft.plot_fft()
 
 
 class SignalProcessing:
@@ -133,8 +83,25 @@ if __name__ == '__main__':
 
     adc = ADC(vcc=3.3, resolution_bits=16)
     ad8429_g2 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=2)
+    ad8429_g30 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=30)
+
     alt021 = ALT021(vcc=Config.SENSOR_VCC)
+    hmc1001 = HMC1001(vcc=Config.SENSOR_VCC)
+    drv5055 = DRV5055(vcc=Config.SENSOR_VCC)
+    drv425 = DRV425(vcc=Config.SENSOR_VCC, R_shunt=100)
 
     sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g2)
     sp_alt021.plot_v_adc()
     sp_alt021.plot_magnetic_field()
+
+    # sp_hmc1001 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=hmc1001, ad8429=ad8429_g30)
+    # sp_hmc1001.plot_v_adc()
+    # sp_hmc1001.plot_magnetic_field()
+
+    # sp_drv5055 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=drv5055, ad8429=ad8429_g30)
+    # sp_drv5055.plot_v_adc()
+    # sp_drv5055.plot_magnetic_field()
+
+    # sp_drv425 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=drv425, ad8429=ad8429_g2)
+    # sp_drv425.plot_v_adc()
+    # sp_drv425.plot_magnetic_field()

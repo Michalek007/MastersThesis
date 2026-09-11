@@ -3,7 +3,7 @@ import numpy as np
 
 class SignalAnalyzer:
     def __init__(self, signal):
-        self.signal = signal
+        self.signal = np.asarray(signal, dtype=np.float64)
         self.N = len(signal)
 
         # --- Time Domain Parameters ---
