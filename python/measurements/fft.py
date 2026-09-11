@@ -13,6 +13,7 @@ class FFT:
         self.fft = None
         self.freqs = None
         self.sampling_rate = sampling_rate
+        self.harmonics_amp = None
 
     def calculate(self):
         """
@@ -58,7 +59,7 @@ class FFT:
         self.calculate()
         self.fft *= correction_factor
 
-    def plot_fft(self, y_scale=1, x_scale=1, x_lim=None, y_label="Amplituda", title="Widmo częstotliwościowe"):
+    def plot_fft(self, y_scale=1, x_scale=1, x_lim=None, y_label="Amplituda", title="Widmo częstotliwościowe", save=False, filename="fft"):
         plt.figure(figsize=(10, 5))
         plt.plot(self.freqs*x_scale, self.fft*y_scale, color='b')
 
@@ -74,7 +75,41 @@ class FFT:
         if x_lim:
             plt.xlim(0, x_lim)
         plt.tight_layout()
-        plt.show()
+        if save:
+            plt.savefig(f'graphs/{filename}.png', dpi=500)
+        else:
+            plt.show()
+
+    def get_harmonic_amplitudes(self, f0, num_harmonics=50, search_window_hz=2.0):
+        self.harmonics_amp = []
+
+        for n in range(1, num_harmonics + 1):
+            target_freq = n * f0
+
+            # 1. Create a mask to find bins within our search window
+            mask = (self.freqs >= target_freq - search_window_hz) & (self.freqs <= target_freq + search_window_hz)
+            valid_indices = np.where(mask)[0]
+
+            if len(valid_indices) == 0:
+                print(f"Warning: Harmonic {n} at {target_freq}Hz is out of bounds or window is too small.")
+                continue
+
+            # 2. Find the index of the maximum amplitude within this specific window
+            local_mag = self.fft[valid_indices]
+            peak_idx = valid_indices[np.argmax(local_mag)]
+
+            # 3. Store the results
+            self.harmonics_amp.append({
+                'harmonic': n,
+                'frequency': self.freqs[peak_idx],
+                'amplitude': self.fft[peak_idx]
+            })
+
+    def print_harmonic_amplitudes(self, amp_scale=1.0, freq_scale=1.0):
+        print()
+        for h in self.harmonics_amp:
+            print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale:.1f} Hz | Amplitude = {h['amplitude']*amp_scale:.4f}")
+        print()
 
 
 if __name__ == "__main__":
@@ -85,8 +120,6 @@ if __name__ == "__main__":
     # Generate a test signal:
     # 50 Hz fundamental (Amplitude = 3.0) + 150 Hz harmonic (Amplitude = 1.5)
     test_signal = 3.0 * np.sin(2 * np.pi * 50 * t) + 1.5 * np.sin(2 * np.pi * 150 * t)
-    test_signal += 10
-    test_signal -= np.average(test_signal)
 
     # Add a tiny bit of random noise
     test_signal += np.random.normal(0, 0.2, len(t))
@@ -95,7 +128,12 @@ if __name__ == "__main__":
     fft = FFT(signal=test_signal, sampling_rate=fs)
     fft.calculate()
     fft.plot_fft()
-    # f_values, amp_values = calculate_fft(test_signal, fs)
-    # plot_fft(f_values, amp_values, title="FFT of 50 Hz Base Signal with 3rd Harmonic")
+
     fft.calculate_window(window=Window.HANNING)
     fft.plot_fft()
+    fft.get_harmonic_amplitudes(
+        f0=50.0,
+        num_harmonics=3,
+        search_window_hz=3.0
+    )
+    fft.print_harmonic_amplitudes()

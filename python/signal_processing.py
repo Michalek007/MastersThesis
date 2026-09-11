@@ -1,4 +1,5 @@
 from measurements.fft import FFT
+from measurements.signal_analyzer import SignalAnalyzer
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
@@ -18,6 +19,7 @@ class Config:
     SENSOR_VCC = 5
     AD8429_VP = 7.8
     AD8429_VN = -7.6
+    AD8429_V_REF = 3.3 / 2
     DATA_FILE = "data/uart_capture.bin"
 
 
@@ -82,28 +84,43 @@ class SignalProcessing:
         self.ad8429 = ad8429
         self.fft = FFT(signal=self.dac_values, sampling_rate=Config.SAMPLING_RATE)
         self.fft.calculate()
+        self.fft.get_harmonic_amplitudes(f0=50, num_harmonics=50)
+        self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
 
-    def plot(self, title, y_scale = 1, periods: int = 5, y_label = "Amplitude", offset=0):
+    def plot(self, title, y_scale = 1, periods: int = 5, y_label = "Amplitude", offset_calibration=0, save=False, filename='graph'):
         plt.figure()
-        plt.plot(self.t[0:int(Config.SAMPLES_PER_PERIOD*periods)], (self.dac_values[0:int(Config.SAMPLES_PER_PERIOD*periods)]+offset) * y_scale)
+        plt.plot(self.t[0:int(Config.SAMPLES_PER_PERIOD*periods)], (self.dac_values[0:int(Config.SAMPLES_PER_PERIOD*periods)]-offset_calibration) * y_scale)
         plt.title(title)
         plt.xlabel("Czas [s]")
         plt.ylabel(y_label)
         plt.grid(True)
         plt.tight_layout()
-        plt.show()
+        if save:
+            plt.savefig(f'graphs/{filename}.png', dpi=500)
+        else:
+            plt.show()
 
     def plot_v_adc(self):
         self.plot(title="Napięcie od czasu przetwornika A/C", y_scale=adc.Lsb, y_label="Napięcie [V]")
         self.fft.plot_fft(y_scale=adc.Lsb)
+        # self.fft.print_harmonic_amplitudes(amp_scale=adc.Lsb)
+        self.signal_analyser.print_parameters(scale=adc.Lsb)
 
     def plot_magnetic_field(self):
         offset = np.average(self.dac_values)
         factor = adc.Lsb / self.ad8429.G / self.sensor.S * 1e6
-        self.plot(title="Pole magnetyczne od czasu", y_scale=factor, y_label="Pole magnetycze [uT]", offset=-offset)
+        self.plot(title="Pole magnetyczne od czasu z usuniętą składową stałą", y_scale=factor, y_label="Pole magnetycze [uT]", offset_calibration=offset)
         fft = FFT(signal=self.dac_values-offset, sampling_rate=Config.SAMPLING_RATE)
         fft.calculate()
         fft.plot_fft(y_scale=factor)
+        SignalAnalyzer(signal=self.dac_values-offset).print_parameters(scale=factor)
+
+        ad8429_offset = self.adc.Value(Config.AD8429_V_REF)
+        self.plot(title="Pole magnetyczne od czasu", y_scale=factor, y_label="Pole magnetycze [uT]", offset_calibration=ad8429_offset)
+        fft = FFT(signal=self.dac_values-ad8429_offset, sampling_rate=Config.SAMPLING_RATE)
+        fft.calculate()
+        fft.plot_fft(y_scale=factor)
+        SignalAnalyzer(self.dac_values-ad8429_offset).print_parameters(scale=factor)
 
 
 if __name__ == '__main__':
