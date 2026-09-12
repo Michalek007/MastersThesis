@@ -1,6 +1,6 @@
 from measurements.fft import FFT
 from measurements.signal_analyzer import SignalAnalyzer
-from measurements.uart import DataReader
+from measurements.uart import DataReader, UART
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
@@ -21,12 +21,13 @@ class Config:
     AD8429_VP = 7.8
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
-    DATA_FILE = "data/uart_capture.bin"
+    # DATA_FILE = "data/uart_capture.bin"
+    DATA_FILE = "data/uart_capture_20260911_2136.bin"
 
 
 class SignalProcessing:
     def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429):
-        self.dac_values = np.array(dac_values)
+        self.dac_values = np.array(dac_values, dtype=np.float64)
         self.n_samples = len(dac_values)
         self.t = [i * Config.TIME_STEP for i in range(self.n_samples)]
         self.adc = adc

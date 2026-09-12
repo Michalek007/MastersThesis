@@ -25,6 +25,7 @@ class SignalGenerator:
         if not self.harmonics_dict:
             self.harmonics_dict = {1: 1.0}
         self.filename = filename
+        self.name = self.filename.parts[-1].split(".")[-2]
         self.t = np.linspace(0, 1, self.n_samples, endpoint=False)
         self.signal = np.zeros_like(self.t)
         self.fft: FFT
@@ -59,7 +60,7 @@ class SignalGenerator:
         plt.ylabel(y_label)
         plt.grid(True)
         if save:
-            plt.savefig(f'graphs/{self.filename.parts[-1].split(".")[-2]}.png', dpi=500)
+            plt.savefig(f'graphs/{self.name}.png', dpi=500)
         else:
             plt.show()
 
@@ -84,7 +85,7 @@ class SignalGenerator:
 
         self.normalize()
         self.parameters = SignalAnalyzer(signal=self.signal)
-        self.parameters.print_parameters()
+        self.parameters.print_parameters(filename=f'data/{self.name}.csv')
 
         self.plot()
         self.save()
@@ -121,3 +122,4 @@ if __name__ == '__main__':
     SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/square_wave.bin")).generate(signal_type=Signal.SQUARE_WAVE)
     SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/triangular_wave.bin")).generate(signal_type=Signal.TRIANGULAR_WAVE)
     SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_3, filename=Path("data/harmonics_3.bin")).generate()
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/sine.bin")).generate()

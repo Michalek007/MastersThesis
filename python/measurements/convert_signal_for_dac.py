@@ -60,3 +60,4 @@ if __name__ == '__main__':
     dac = DAC(vcc=Config.DAC_VCC, resolution_bits=Config.DAC_RES_BITS)
     CovertSignalForDAC(filename=Config.FILENAME, dac=dac).convert_and_save(dac.Max_value/2)
     CovertSignalForDAC(filename=Config.FILENAME_2, dac=dac).convert_and_save(dac.Max_value/2, 2000)
+    CovertSignalForDAC(filename=Path('data/sine.bin'), dac=dac).convert_and_save(dac.Value(0.1))

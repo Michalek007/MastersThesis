@@ -36,13 +36,13 @@
 #define P 2
 #define DATA_SIZE 1600 / OVR / 2
 #define UART_TX_BUF_SIZE DATA_SIZE * 2
-#define UART_RX_BUF_SIZE 2
+#define UART_RX_BUF_SIZE 3
 #define SAMPLES_PER_SECOND 10000
 
-typedef struct {
-	uint32_t sync;
-	uint8_t data[UART_TX_BUF_SIZE];
-} UartPacket;
+//typedef struct __attribute__((packed)) {
+//	uint32_t sync;
+//	uint8_t data[UART_TX_BUF_SIZE];
+//} UartPacket;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -91,8 +91,9 @@ volatile uint8_t uartTxBusy = 0;
 volatile uint8_t uartTxRequest = 0;
 volatile uint8_t uartRxReceived = 0;
 
-//UartPacket uartPacket = {.sync== 0xDEADBEEF};
-//= 0xDEADBEEF
+const uint16_t *dac_lut = sine;
+
+//UartPacket uartPacket = { .sync = 0xDEADBEEF, .data = { 0 } };
 /* USER CODE END 0 */
 
 /**
@@ -133,15 +134,6 @@ int main(void) {
 	HAL_Delay(1000);
 
 	HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
-
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) sine50hz, 1000, DAC_ALIGN_12B_R);
-	HAL_TIM_Base_Start(&htim2);
-
-//	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
-//	HAL_TIM_Base_Start(&htim3);
-
-//	HAL_TIM_Base_Stop(&htim3);
-//	HAL_ADC_Stop_DMA(&hadc1);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -155,11 +147,16 @@ int main(void) {
 			uartTxRequest = 0;
 			uartTxBusy = 1;
 			HAL_UART_Transmit_DMA(&huart3, uartTxBuffer, UART_TX_BUF_SIZE);
+//			HAL_UART_Transmit_DMA(&huart3, (uint8_t*) &uartPacket, UART_TX_BUF_SIZE + 4);
 			HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
 			n_samples -= DATA_SIZE;
 			if (n_samples == 0) {
 				HAL_TIM_Base_Stop(&htim3);
 				HAL_ADC_Stop_DMA(&hadc1);
+
+				HAL_TIM_Base_Stop(&htim2);
+				HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+
 				HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
 				HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 			}
@@ -168,10 +165,22 @@ int main(void) {
 			if (uartRxBuffer[0] == 'S') {
 				n_samples = uartRxBuffer[1] * SAMPLES_PER_SECOND;
 
+				if (uartRxBuffer[2] == 0) {
+					dac_lut = sine;
+				} else if (uartRxBuffer[2] == 1) {
+					dac_lut = sine_odd_harmonics;
+				} else {
+					dac_lut = square_wave;
+				}
+
+				HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
+				HAL_TIM_Base_Start(&htim2);
+
 				HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
 				HAL_TIM_Base_Start(&htim3);
 				uartRxReceived = 0;
 			}
+//			if (uartRxBuffer[])
 		}
 	}
 	/* USER CODE END 3 */
@@ -600,10 +609,9 @@ static inline void processAdcBlock(uint16_t *buffer, uint16_t len) {
 		adcResultTemp >>= P;
 		uartTxBuffer[uartTxIndex++] = adcResultTemp >> 8;
 		uartTxBuffer[uartTxIndex++] = adcResultTemp;
-//		if (uartTxIndex + 1 < UART_TX_BUF_SIZE) {
-//			uartTxBuffer[uartTxIndex++] = adcResultTemp >> 8;
-//			uartTxBuffer[uartTxIndex++] = adcResultTemp;
-//		}
+
+//		uartPacket.data[uartTxIndex++] = adcResultTemp >> 8;
+//		uartPacket.data[uartTxIndex++] = adcResultTemp;
 	}
 	uartTxIndex = 0;
 	uartTxRequest = 1;
