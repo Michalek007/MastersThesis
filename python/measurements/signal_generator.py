@@ -16,6 +16,7 @@ class Signal(Enum):
     SINUS = 0
     SQUARE_WAVE = 1
     TRIANGULAR_WAVE = 2
+    DC = 3
 
 
 class SignalGenerator:
@@ -43,8 +44,12 @@ class SignalGenerator:
         phase = (self.t * 2) % 2
         self.signal = np.where(phase < 1, phase, 2 - phase)
 
+    def generate_dc(self):
+        self.signal = np.ones(self.n_samples, dtype=np.float64)
+
     def normalize(self):
-        self.signal -= np.min(self.signal)
+        if np.min(self.signal) < 0:
+            self.signal -= np.min(self.signal)
         self.signal /= np.max(self.signal)
         # self.signal /= self.harmonics_dict[1]
 
@@ -71,6 +76,8 @@ class SignalGenerator:
             self.generate_square_wave()
         elif signal_type == Signal.TRIANGULAR_WAVE:
             self.generate_triangular_wave()
+        elif signal_type == Signal.DC:
+            self.generate_dc()
         else:
             raise NotImplementedError()
 
@@ -123,3 +130,4 @@ if __name__ == '__main__':
     SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/triangular_wave.bin")).generate(signal_type=Signal.TRIANGULAR_WAVE)
     SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_3, filename=Path("data/harmonics_3.bin")).generate()
     SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/sine.bin")).generate()
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/dc.bin")).generate(signal_type=Signal.DC)

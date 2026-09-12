@@ -8,8 +8,10 @@ class Window(Enum):
 
 
 class FFT:
-    def __init__(self, signal, sampling_rate):
+    def __init__(self, signal, sampling_rate, remove_offset=False):
         self.signal = signal
+        if remove_offset:
+            self.signal = self.signal - np.mean(self.signal)
         self.fft = None
         self.freqs = None
         self.sampling_rate = sampling_rate

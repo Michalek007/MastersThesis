@@ -35,9 +35,10 @@
 #define OVR 4
 #define P 2
 #define DATA_SIZE 1600 / OVR / 2
-#define UART_TX_BUF_SIZE DATA_SIZE * 2
+#define UART_TX_BUF_SIZE DATA_SIZE * 2  // batch size
 #define UART_RX_BUF_SIZE 3
 #define SAMPLES_PER_SECOND 10000
+#define DAC_LUT_SIZE 1000
 
 //typedef struct __attribute__((packed)) {
 //	uint32_t sync;
@@ -92,6 +93,7 @@ volatile uint8_t uartTxRequest = 0;
 volatile uint8_t uartRxReceived = 0;
 
 const uint16_t *dac_lut = sine;
+uint16_t dac_lut_rx[1000] = { 0 };
 
 //UartPacket uartPacket = { .sync = 0xDEADBEEF, .data = { 0 } };
 /* USER CODE END 0 */
@@ -169,18 +171,25 @@ int main(void) {
 					dac_lut = sine;
 				} else if (uartRxBuffer[2] == 1) {
 					dac_lut = sine_odd_harmonics;
-				} else {
+				} else if (uartRxBuffer[2] == 2) {
 					dac_lut = square_wave;
+				} else {
+					dac_lut = dac_lut_rx;
 				}
 
 				HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
 				HAL_TIM_Base_Start(&htim2);
 
+				HAL_Delay(5);
+
 				HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
 				HAL_TIM_Base_Start(&htim3);
 				uartRxReceived = 0;
+			} else if (uartRxBuffer[0] == 'R') {
+				uartRxReceived = 0;
+				HAL_StatusTypeDef err = HAL_UART_Receive(&huart3, (uint8_t*) dac_lut_rx, 2000, 1000);
+				HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
 			}
-//			if (uartRxBuffer[])
 		}
 	}
 	/* USER CODE END 3 */

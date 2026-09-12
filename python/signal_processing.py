@@ -22,7 +22,8 @@ class Config:
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
     # DATA_FILE = "data/uart_capture.bin"
-    DATA_FILE = "data/uart_capture_20260911_2136.bin"
+    # DATA_FILE = "data/uart_capture_20260911_2136.bin"
+    DATA_FILE = "data/uart_capture_dac_rx_0.bin"
 
 
 class SignalProcessing:

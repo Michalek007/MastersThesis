@@ -14,11 +14,14 @@ class Config:
 
 
 class CovertSignalForDAC:
-    def __init__(self, dac: DAC, filename: Path):
+    def __init__(self, dac: DAC, filename: Path, out_file: Path = None):
         self.dac = dac
         self.filename = filename
         self.loaded_signal = None
         self.dac_signal = None
+        self.out_file = out_file
+        if not self.out_file:
+            self.out_file = Path("data/dac_" + self.filename.parts[-1])
 
     def load_signal(self):
         self.loaded_signal = np.fromfile(self.filename, dtype=np.float32)
@@ -38,7 +41,7 @@ class CovertSignalForDAC:
         plt.show()
 
     def save(self):
-        self.dac_signal.astype(np.float32).tofile("data\\dac_" + str(self.filename.parts[-1]))
+        self.dac_signal.astype(np.uint16).tofile(self.out_file)
 
     def print_c_array(self):
         print(f"const uint16_t dac_lut[{len(self.dac_signal)}] = {{")
@@ -61,3 +64,5 @@ if __name__ == '__main__':
     CovertSignalForDAC(filename=Config.FILENAME, dac=dac).convert_and_save(dac.Max_value/2)
     CovertSignalForDAC(filename=Config.FILENAME_2, dac=dac).convert_and_save(dac.Max_value/2, 2000)
     CovertSignalForDAC(filename=Path('data/sine.bin'), dac=dac).convert_and_save(dac.Value(0.1))
+    CovertSignalForDAC(filename=Path('data/sine.bin'), out_file=Path('data/dac_small_sine.bin'), dac=dac).convert_and_save(20)
+    CovertSignalForDAC(filename=Path('data/dc.bin'), dac=dac).convert_and_save(2048)
