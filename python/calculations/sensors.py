@@ -36,6 +36,9 @@ class Sensor:
     def Vout_min(self, B_min):
         return self.Vout(B_min) + self.Offset_min
 
+    def B(self, Vout):
+        return (Vout-self.Offset)/self.S
+
 
 class AD8429:
     def __init__(self, vs_positive, vs_negative, v_reference, gain):

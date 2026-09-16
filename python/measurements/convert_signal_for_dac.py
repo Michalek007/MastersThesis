@@ -66,3 +66,4 @@ if __name__ == '__main__':
     CovertSignalForDAC(filename=Path('data/sine.bin'), dac=dac).convert_and_save(dac.Value(0.1))
     CovertSignalForDAC(filename=Path('data/sine.bin'), out_file=Path('data/dac_small_sine.bin'), dac=dac).convert_and_save(20)
     CovertSignalForDAC(filename=Path('data/dc.bin'), dac=dac).convert_and_save(2048)
+    CovertSignalForDAC(filename=Path('data/sine.bin'), out_file=Path('data/dac_sine_100.bin'), dac=dac).convert_and_save(50, offset=dac.Value(0.5))

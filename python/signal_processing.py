@@ -1,6 +1,6 @@
 from measurements.fft import FFT
 from measurements.signal_analyzer import SignalAnalyzer
-from measurements.uart import DataReader, UART
+from measurements.uart import DataReader, UART, Waveform
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
@@ -9,6 +9,7 @@ from pathlib import Path
 import struct
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
 
 
 class Config:
@@ -23,7 +24,16 @@ class Config:
     AD8429_V_REF = 3.3 / 2
     # DATA_FILE = "data/uart_capture.bin"
     # DATA_FILE = "data/uart_capture_20260911_2136.bin"
-    DATA_FILE = "data/uart_capture_dac_rx_0.bin"
+    # DATA_FILE = "data/uart_capture_dac_rx_0.bin"
+    # DATA_FILE = "data/ad8429_in_0v.bin"
+    # DATA_FILE = "data/"
+    # DATA_FILE = "data/"
+    # DATA_FILE = "data/"
+    SERIAL_PORT = "COM3"
+    BAUDRATE = 230400
+    OUT_FILE = Path(f"data/uart_capture_{datetime.now().strftime('%Y%m%d_%H%M')}.bin")
+    DATA_FILE = OUT_FILE
+    BATCH_SIZE = 400
 
 
 class SignalProcessing:
@@ -34,7 +44,7 @@ class SignalProcessing:
         self.adc = adc
         self.sensor = sensor
         self.ad8429 = ad8429
-        self.fft = FFT(signal=self.dac_values, sampling_rate=Config.SAMPLING_RATE)
+        self.fft = FFT(signal=self.dac_values, sampling_rate=Config.SAMPLING_RATE, remove_offset=True)
         self.fft.calculate()
         self.fft.get_harmonic_amplitudes(f0=50, num_harmonics=50)
         self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
@@ -76,11 +86,26 @@ class SignalProcessing:
 
 
 if __name__ == '__main__':
+    uart = UART(serial_port=Config.SERIAL_PORT, baudrate=Config.BAUDRATE, out_file=Config.OUT_FILE, batch_size=Config.BATCH_SIZE)
+    uart.connect()
+    # uart.send_waveform(filename=Path('data/dac_dc_50ut.bin'))
+    # uart.send_waveform(filename=Path('data/dac_sine_AC_1uT_DC_50uT.bin'))
+    # uart.send_waveform(filename=Path('data/sine_AC_50uT_DC_100uT.bin'))
+    # uart.send_waveform(filename=Path('data/dac_500kv_under_line_nT.bin'))
+
+    # uart.send_waveform(filename=Path('data/triangular_AC_50uT_DC_20uT.bin'))
+    # uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT)
+    # uart.capture(record_seconds=5, waveform=Waveform.SINE)
+    uart.capture(record_seconds=5, waveform=Waveform.SINE_ODD_HARMONICS)
+    # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
+    uart.close()
+
     data_reader = DataReader(filename=Path(Config.DATA_FILE))
     data_reader.read()
+    data_reader.analyse_signal()
     data_reader.plot_scatter(periods=2)
     data_reader.plot_histogram()
-    data_reader.plot(periods=1)
+    data_reader.plot(periods=2)
     data_reader.fft()
 
     adc = ADC(vcc=3.3, resolution_bits=16)

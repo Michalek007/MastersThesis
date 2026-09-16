@@ -151,7 +151,7 @@ class DataReader:
         plt.show()
 
     def fft(self, scale_to_v=False):
-        fft = FFT(signal=self.values if not scale_to_v else self.v_adc, sampling_rate=Config.SAMPLING_RATE, remove_offset=False)
+        fft = FFT(signal=self.values if not scale_to_v else self.v_adc, sampling_rate=Config.SAMPLING_RATE, remove_offset=True)
         fft.calculate()
         fft.plot_fft(x_lim=2500)
         fft.get_harmonic_amplitudes(f0=50, num_harmonics=5, search_window_hz=2.0)
@@ -183,8 +183,8 @@ def rc_filter_numpy(data, fs=10_000, R=1000, C=22e-9):
 if __name__ == "__main__":
     uart = UART(serial_port=Config.SERIAL_PORT, baudrate=Config.BAUDRATE, out_file=Config.OUT_FILE, batch_size=Config.BATCH_SIZE)
     uart.connect()
-
-    uart.send_waveform(filename=Path('data/dac_dc.bin'))
+    # uart.send_waveform(filename=Path('data/dac_sine_100.bin'))
+    # uart.send_waveform(filename=Path('data/dac_dc.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_signal_odd_harmonics.bin'))
@@ -192,6 +192,7 @@ if __name__ == "__main__":
     uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT)
     # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
     # uart.capture(record_seconds=5, waveform=Waveform.SINE)
+    # uart.capture(record_seconds=5, waveform=Waveform.SINE_ODD_HARMONICS)
     uart.close()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
