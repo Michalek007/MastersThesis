@@ -1,7 +1,7 @@
 from measurements.signal_generator import SignalGenerator, Signal
 from measurements.convert_signal_for_dac import CovertSignalForDAC
 from calculations.helmholtz_coil import HelmholtzCoil, DAC, CurrentSource
-from harmonics_data import harmonics_500kv_under_line_nT
+from harmonic_data import harmonic_500kv_under_line_nT
 
 from pathlib import Path
 

@@ -16,6 +16,7 @@ class FFT:
         self.freqs = None
         self.sampling_rate = sampling_rate
         self.harmonics_amp = None
+        self.thd = None
 
     def calculate(self):
         """
@@ -112,6 +113,42 @@ class FFT:
         for h in self.harmonics_amp:
             print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale:.1f} Hz | Amplitude = {h['amplitude']*amp_scale:.4f}")
         print()
+
+    def calculate_thd(self, as_percentage=True):
+        fundamental_amp = 0.0
+        sum_squares_harmonics = 0.0
+
+        for item in self.harmonics_amp:
+            n = item.get('harmonic')
+            amp = item.get('amplitude', 0.0)
+
+            if n == 1:
+                fundamental_amp = amp
+            elif n is not None and n > 1:
+                sum_squares_harmonics += amp ** 2
+
+        if fundamental_amp == 0.0:
+            raise ValueError("Fundamental amplitude (harmonic 1) is missing or zero.")
+
+        thd = np.sqrt(sum_squares_harmonics) / fundamental_amp
+        self.thd = thd * 100 if as_percentage else thd
+
+    @staticmethod
+    def calculate_thd_from_dict(harmonics_dict, as_percentage=True):
+        fundamental_amp = 0.0
+        sum_squares_harmonics = 0.0
+
+        for n, amp in harmonics_dict.items():
+            if n == 1:
+                fundamental_amp = amp
+            elif n > 1:
+                sum_squares_harmonics += amp ** 2
+
+        if fundamental_amp == 0.0:
+            raise ValueError("Fundamental amplitude (harmonic 1) is missing or zero.")
+
+        thd = np.sqrt(sum_squares_harmonics) / fundamental_amp
+        return thd * 100 if as_percentage else thd
 
 
 if __name__ == "__main__":
