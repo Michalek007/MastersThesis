@@ -19,8 +19,8 @@ class SignalAnalyzer:
         self.peak_to_peak = np.max(self.signal) - np.min(self.signal)
 
         # 4. Standard Deviation (AC RMS)
-        self.std = np.std(self.signal)
-        self.ac_rms = SignalAnalyzer.rms(self.signal-self.mean)
+        self.ac_rms = np.std(self.signal)
+        # self.ac_rms = SignalAnalyzer.rms(self.signal-self.mean)
 
         # # 5. Crest Factor (Peak to RMS ratio)
         # peak_abs = np.max(np.abs(self.signal))
@@ -42,7 +42,7 @@ class SignalAnalyzer:
             "MEAN": self.mean * scale,
             "RMS": self.rms * scale,
             "AC_RMS": self.ac_rms * scale,
-            "STD": self.std * scale,
+            # "STD": self.std * scale,
             "Peak-to-Peak": self.peak_to_peak * scale,
         }
 

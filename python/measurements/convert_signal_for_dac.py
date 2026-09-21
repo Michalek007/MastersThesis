@@ -27,8 +27,9 @@ class CovertSignalForDAC:
         self.loaded_signal = np.fromfile(self.filename, dtype=np.float32)
 
     def convert_to_dac_signal(self, amp, offset):
-        max_value = min(amp, self.dac.Max_value)
-        self.dac_signal = np.round(self.loaded_signal * max_value + offset).astype(np.uint16)
+        # max_value = min(amp, self.dac.Max_value)
+        self.loaded_signal -= np.min(self.loaded_signal)
+        self.dac_signal = np.round(self.loaded_signal * amp + offset).astype(np.uint16)
         np.clip(self.dac_signal, a_min=0, a_max=self.dac.Max_value, out=self.dac_signal)
 
     def plot(self):
@@ -37,6 +38,14 @@ class CovertSignalForDAC:
         plt.title(f"{self.filename}")
         plt.xlabel("Próbka")
         plt.ylabel("Amplituda")
+        plt.grid(True)
+        plt.show()
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(list(range(len(self.dac_signal))), self.dac_signal*self.dac.Lsb)
+        plt.title(f"{self.filename}")
+        plt.xlabel("Czas")
+        plt.ylabel("Napięcie [V]")
         plt.grid(True)
         plt.show()
 

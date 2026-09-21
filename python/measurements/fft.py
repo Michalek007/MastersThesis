@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from enum import Enum
+import csv
+from pathlib import Path
 
 
 class Window(Enum):
@@ -14,6 +16,7 @@ class FFT:
             self.signal = self.signal - np.mean(self.signal)
         self.fft = None
         self.freqs = None
+        self.phase = None
         self.sampling_rate = sampling_rate
         self.harmonics_amp = None
         self.thd = None
@@ -35,6 +38,7 @@ class FFT:
         half_n = N // 2
         self.freqs = freqs[:half_n]
         self.fft = fft_complex[:half_n]
+        self.phase = np.angle(self.fft)
 
         # 4. Calculate amplitude and normalize
         # Divide by N and multiply by 2 to recover the true amplitude
@@ -44,6 +48,8 @@ class FFT:
         # 5. The DC component (0 Hz) doesn't have a negative twin,
         # so we must divide it back by 2
         self.fft[0] = self.fft[0] / 2.0
+        self.phase[self.fft < 1e-5] = 0
+        self.phase = np.degrees(self.phase)
 
     def calculate_window(self, window: Window = Window.HANNING):
         N = len(self.signal)
@@ -105,14 +111,28 @@ class FFT:
             self.harmonics_amp.append({
                 'harmonic': n,
                 'frequency': self.freqs[peak_idx],
-                'amplitude': self.fft[peak_idx]
+                'amplitude': self.fft[peak_idx],
+                'phase': self.phase[peak_idx],
             })
 
-    def print_harmonic_amplitudes(self, amp_scale=1.0, freq_scale=1.0):
+    def print_harmonic_amplitudes(self, amp_scale=1.0, freq_scale=1.0, filename=None):
         print()
         for h in self.harmonics_amp:
-            print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale:.1f} Hz | Amplitude = {h['amplitude']*amp_scale:.4f}")
+            print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale} Hz | Amplitude = {h['amplitude']*amp_scale}| Phase = {h['phase']}")
         print()
+        if filename:
+            with open(filename, mode="w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["harmonic", "frequency_hz", "amplitude", "phase"])
+                for h in self.harmonics_amp:
+                    writer.writerow(
+                        [
+                            h["harmonic"],
+                            h["frequency"] * freq_scale,
+                            h["amplitude"] * amp_scale,
+                            h["phase"]
+                        ]
+                    )
 
     def calculate_thd(self, as_percentage=True):
         fundamental_amp = 0.0
@@ -167,6 +187,12 @@ if __name__ == "__main__":
     fft = FFT(signal=test_signal, sampling_rate=fs)
     fft.calculate()
     fft.plot_fft()
+    fft.get_harmonic_amplitudes(
+        f0=50.0,
+        num_harmonics=3,
+        search_window_hz=3.0
+    )
+    fft.print_harmonic_amplitudes(filename=Path('data/harmonics.csv'))
 
     fft.calculate_window(window=Window.HANNING)
     fft.plot_fft()

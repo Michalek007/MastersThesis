@@ -13,7 +13,7 @@ class Config:
 
 
 class Signal(Enum):
-    SINUS = 0
+    SINE = 0
     SQUARE_WAVE = 1
     TRIANGULAR_WAVE = 2
     DC = 3
@@ -30,7 +30,7 @@ class SignalGenerator:
         self.t = np.linspace(0, 1, self.n_samples, endpoint=False)
         self.signal = np.zeros_like(self.t)
         self.fft: FFT
-        self.parameters: SignalAnalyzer
+        self.analyzer: SignalAnalyzer
 
     def generate_harmonics(self):
         for harmonic, amplitude in self.harmonics_dict.items():
@@ -48,10 +48,12 @@ class SignalGenerator:
         self.signal = np.ones(self.n_samples, dtype=np.float64)
 
     def normalize(self):
-        if np.min(self.signal) < 0:
-            self.signal -= np.min(self.signal)
-        self.signal /= np.max(self.signal)
-        # self.signal /= self.harmonics_dict[1]
+        # if np.min(self.signal) < 0:
+        #     self.signal -= np.min(self.signal)
+        if self.harmonics_dict:
+            self.signal /= self.harmonics_dict[1]
+        else:
+            self.signal /= np.max(self.signal)
 
     def save(self):
         self.signal.astype(np.float32).tofile(self.filename)
@@ -69,8 +71,8 @@ class SignalGenerator:
         else:
             plt.show()
 
-    def generate(self, signal_type: Signal = Signal.SINUS):
-        if signal_type == Signal.SINUS:
+    def generate(self, signal_type: Signal = Signal.SINE):
+        if signal_type == Signal.SINE:
             self.generate_harmonics()
         elif signal_type == Signal.SQUARE_WAVE:
             self.generate_square_wave()
@@ -81,6 +83,9 @@ class SignalGenerator:
         else:
             raise NotImplementedError()
 
+        print("Data: ", self.name)
+        self.normalize()
+
         self.fft = FFT(self.signal, sampling_rate=self.n_samples)
         self.fft.calculate()
         self.fft.plot_fft(x_scale=Config.FREQ, x_lim=Config.MAX_FREQ)
@@ -88,11 +93,10 @@ class SignalGenerator:
             self.fft.get_harmonic_amplitudes(f0=1, num_harmonics=max(self.harmonics_dict.keys()), search_window_hz=2/50)
         else:
             self.fft.get_harmonic_amplitudes(f0=1, num_harmonics=50, search_window_hz=2/50)
-        self.fft.print_harmonic_amplitudes()
+        self.fft.print_harmonic_amplitudes(freq_scale=Config.FREQ, filename=Path(f"data/{self.name}_harmonics.csv"))
 
-        self.normalize()
-        self.parameters = SignalAnalyzer(signal=self.signal)
-        self.parameters.print_parameters(filename=f'data/{self.name}.csv')
+        self.analyzer = SignalAnalyzer(signal=self.signal)
+        self.analyzer.print_parameters(filename=f'data/{self.name}.csv')
 
         self.plot()
         self.save()

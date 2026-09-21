@@ -8,6 +8,7 @@ from measurements.fft import FFT
 # I.S. Okrainskaya*, A.I. Sidorov*, and S.P. Gladyshev**
 # *   South Ural State University, Tel: +7 351 267 9449, okrainskaya@yandex.ru, (Russia)
 # ** Michigan-Dearborn University, Tel: 313 359 9084, sgladyshev@yahoo.com, (USA)
+# RMS
 
 harmonic_500kv_under_line_nT = {
     1: 7531.2,
@@ -32,7 +33,30 @@ harmonic_500kv_under_line_nT = {
     20: 1.16
 }
 
-harmonic_220kv_under_line_nT = {
+harmonic_500kV_nT = {
+    1: 764.30,
+    2: 12.69,
+    3: 83.31,
+    4: 21.33,
+    5: 126.39,
+    6: 4.84,
+    7: 61.65,
+    8: 5.22,
+    9: 20.94,
+    10: 3.75,
+    11: 38.64,
+    12: 2.16,
+    13: 12.45,
+    14: 1.07,
+    15: 5.04,
+    16: 3.16,
+    17: 17.08,
+    18: 2.62,
+    19: 14.50,
+    20: 1.38
+}
+
+harmonic_220kv_nT = {
     1: 1825.90,
     2: 6.46,
     3: 34.97,
@@ -55,7 +79,7 @@ harmonic_220kv_under_line_nT = {
     20: 1.25
 }
 
-harmonic_110kv_under_line_nT = {
+harmonic_110kv_nT = {
     1: 969.77,
     2: 5.55,
     3: 10.38,
@@ -108,7 +132,7 @@ harmonic_IEEE_max_current_distortion = {
     18: 0.016,
     20: 0.016,
 }
-harmonic_110kV_700A_uT = {key: value(22.97) for key, value in harmonic_IEEE_max_current_distortion.items()}
+harmonic_110kV_700A_uT = {key: value*22.97 for key, value in harmonic_IEEE_max_current_distortion.items()}
 
 # max magnetic field corresponding to polish norms
 
@@ -124,7 +148,7 @@ harmonic_110kV_700A_uT = {key: value(22.97) for key, value in harmonic_IEEE_max_
 # THD_I=3.6%
 # THD_I=4%
 # THD_I=4.7%
-# B_1 = 217uT
+# B_1 [RMS] = 217uT
 harmonic_400kV_1_8kA_I = {
     1: 1.8e3,
     5: 32,
@@ -153,10 +177,10 @@ harmonic_400kV_1_8kA_IV = {
     11: 33,
     13: 32
 }
-print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_I))
-print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_II))
-print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_III))
-print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_IV))
+# print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_I))
+# print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_II))
+# print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_III))
+# print(FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_IV))
 
 # Calculation of Magnetic Flux Density Harmonics in the Vicinity
 # of Overhead Lines
@@ -208,6 +232,35 @@ harmonic_400kV_2t_1kA_21m_uT = {
 # 350A, 4.17 uT
 # 500A, 5.96 uT
 # 700A, 8.35 uT
+
+
+# Study on Overhead Transmission Line Magnetic
+# Field Harmonics of VSC-HVDC
+# Tian Wu, Bin Xiao, Kai Liu,Ting Liu, Yong Peng, Ziming Su, Pan Tang, Xinglie Lei
+# China Electric Power Research Institute
+harmonic_VSC_HVDC_10kV_uT = {
+    1: 3.0,
+    2: 1.325,
+    5: 0.2033,
+    8: 0.22,
+    38: 1.146,
+    44: 0.187,
+    71: 1.062,
+    7: 0.135,
+    37: 5.522,
+    40: 0.216,
+    43: 0.106,
+    70: 5.166,
+    73: 0.189,
+    6: 0.561,
+    9: 0.096,
+    33: 20.402,
+    36: 0.581,
+    39: 0.536,
+    66: 19.065
+}
+# harmonic_VSC_HVDC_110kV_uT
+
 
 harmonic_eaf_current = {
     1: 100.0,
