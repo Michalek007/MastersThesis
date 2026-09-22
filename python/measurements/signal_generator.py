@@ -59,7 +59,7 @@ class SignalGenerator:
         self.signal.astype(np.float32).tofile(self.filename)
         print(f"--- Zapisano {len(self.signal)} próbek do pliku: {self.filename} ---")
 
-    def plot(self, amp=1, freq=Config.FREQ, y_label="Amplituda", save=False):
+    def plot(self, amp=1, freq=Config.FREQ, y_label="Amplituda", save=False, name=None):
         plt.figure(figsize=(10, 5))
         plt.plot(self.t * 1/freq, self.signal*amp)
         plt.title(self.filename)
@@ -67,7 +67,8 @@ class SignalGenerator:
         plt.ylabel(y_label)
         plt.grid(True)
         if save:
-            plt.savefig(f'graphs/{self.name}.png', dpi=500)
+            graph_name = name if name else self.name
+            plt.savefig(f'graphs/{graph_name}.png', dpi=500)
         else:
             plt.show()
 

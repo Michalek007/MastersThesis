@@ -19,7 +19,7 @@ class Waveform(Enum):
     LAST_SENT = 3
 
 
-class Config:
+class UartConfig:
     SERIAL_PORT = "COM3"
     BAUDRATE = 230400
     SAMPLING_RATE = 10e3
@@ -56,7 +56,10 @@ class UART:
     def close(self):
         self.serial.close()
 
-    def capture(self, record_seconds, waveform: Waveform):
+    def create_start_packet(self, command_byte="S", record_seconds=1, waveform_value=0, k=1):
+        return bytes([ord(command_byte), record_seconds, waveform_value, k])
+
+    def capture(self, record_seconds, waveform: Waveform, k=1):
         print(f"Recording for {record_seconds} seconds...")
 
         buffer = bytearray()
@@ -112,7 +115,7 @@ class DataReader:
 
         if self.adc:
             self.v_adc = [i * self.adc.Lsb for i in self.values]
-            self.t = [i * Config.TIME_STEP for i in range(self.count)]
+            self.t = [i * UartConfig.TIME_STEP for i in range(self.count)]
 
         if self.count == 0:
             raise ValueError("Error: loaded 0 samples!")
@@ -122,7 +125,7 @@ class DataReader:
         y = self.values if not scale_to_v else self.v_adc
         x = self.x if not scale_to_v else self.t
         plt.figure()
-        plt.plot(x[0:int(Config.SAMPLES_PER_PERIOD*periods)], y[0:int(Config.SAMPLES_PER_PERIOD*periods)])
+        plt.plot(x[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], y[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)])
         plt.title("Raw data" if not scale_to_v else "VADC")
         plt.xlabel("Sample index" if not scale_to_v else "Time [s]")
         plt.ylabel("Value" if not scale_to_v else "Voltage [V]")
@@ -134,7 +137,7 @@ class DataReader:
         y = self.values if not scale_to_v else self.v_adc
         x = self.x if not scale_to_v else self.t
         plt.figure()
-        plt.scatter(x[0:int(Config.SAMPLES_PER_PERIOD*periods)], y[0:int(Config.SAMPLES_PER_PERIOD*periods)], s=0.5)
+        plt.scatter(x[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], y[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], s=0.5)
         plt.title("Raw data" if not scale_to_v else "VADC")
         plt.xlabel("Sample index" if not scale_to_v else "Time [s]")
         plt.ylabel("Value" if not scale_to_v else "Voltage [V]")
@@ -151,7 +154,7 @@ class DataReader:
         plt.show()
 
     def fft(self, scale_to_v=False):
-        fft = FFT(signal=self.values if not scale_to_v else self.v_adc, sampling_rate=Config.SAMPLING_RATE, remove_offset=True)
+        fft = FFT(signal=self.values if not scale_to_v else self.v_adc, sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
         fft.calculate()
         fft.plot_fft(x_lim=2500)
         fft.get_harmonic_amplitudes(f0=50, num_harmonics=5, search_window_hz=2.0)
@@ -181,14 +184,14 @@ def rc_filter_numpy(data, fs=10_000, R=1000, C=22e-9):
 
 
 if __name__ == "__main__":
-    uart = UART(serial_port=Config.SERIAL_PORT, baudrate=Config.BAUDRATE, out_file=Config.OUT_FILE, batch_size=Config.BATCH_SIZE)
+    uart = UART(serial_port=UartConfig.SERIAL_PORT, baudrate=UartConfig.BAUDRATE, out_file=UartConfig.OUT_FILE, batch_size=UartConfig.BATCH_SIZE)
     uart.connect()
     # uart.send_waveform(filename=Path('data/dac_sine_100.bin'))
     # uart.send_waveform(filename=Path('data/dac_dc.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_signal_odd_harmonics.bin'))
-    # time.sleep(1)
+    # time.sleep(0.1)
     uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT)
     # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
     # uart.capture(record_seconds=5, waveform=Waveform.SINE)
@@ -196,7 +199,7 @@ if __name__ == "__main__":
     uart.close()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
-    data_reader = DataReader(filename=Path(Config.OUT_FILE), adc=adc)
+    data_reader = DataReader(filename=Path(UartConfig.OUT_FILE), adc=adc)
     data_reader.read()
     data_reader.plot_scatter(periods=5)
     data_reader.plot_histogram()

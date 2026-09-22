@@ -24,6 +24,10 @@ class CurrentSource:
     def I_res(self):
         return self.Dac.Lsb / self.R_sense / self.R_divider
 
+    @property
+    def V_S(self):
+        return self.R_sense * self.R_divider
+
 
 class HelmholtzCoil:
     def __init__(self, n, R, current_source: CurrentSource):
@@ -89,18 +93,21 @@ if __name__ == '__main__':
     print("Bmax ", helmholtz_coil.B_max * 1e6, " uT")
     print("Ires ", current_source.I_res * 1e6, " uA")
     print("Bres ", helmholtz_coil.B_res * 1e6, " uT")
+    print("Brms max for sine: ", helmholtz_coil.B((dac.V_max-dac.V_min) / 2 / current_source.R_divider / current_source.R_sense / (2 ** 0.5)) * 1e6, " uT")
     print()
 
     helmholtz_coil.current_source.R_divider = 2
     print("Bmax ", helmholtz_coil.B_max * 1e6, " uT")
     print("Ires ", current_source.I_res * 1e6, " uA")
     print("Bres ", helmholtz_coil.B_res * 1e6, " uT")
+    print("Brms max for sine: ", helmholtz_coil.B((dac.V_max-dac.V_min) / 2 / current_source.R_divider / current_source.R_sense / (2 ** 0.5)) * 1e6, " uT")
     print()
 
     helmholtz_coil.current_source.R_divider = 10
     print("Bmax ", helmholtz_coil.B_max * 1e6, " uT")
     print("Ires ", current_source.I_res * 1e6, " uA")
     print("Bres ", helmholtz_coil.B_res * 1e6, " uT")
+    print("Brms max for sine: ", helmholtz_coil.B((dac.V_max-dac.V_min) / 2 / current_source.R_divider / current_source.R_sense / (2 ** 0.5)) * 1e6, " uT")
     print()
 
     current_source = CurrentSource(R=7.5, dac=dac, R_divider=1)
@@ -111,4 +118,5 @@ if __name__ == '__main__':
     print("Bmax ", helmholtz_coil.B_max * 1e6, " uT")
     print("Ires ", current_source.I_res * 1e6, " uA")
     print("Bres ", helmholtz_coil.B_res * 1e6, " uT")
+    print("Brms max for sine: ", helmholtz_coil.B((dac.V_max-dac.V_min) / 2 / current_source.R_divider / current_source.R_sense / (2 ** 0.5)) * 1e6, " uT")
     print()

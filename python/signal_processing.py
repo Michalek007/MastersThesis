@@ -64,13 +64,13 @@ class SignalProcessing:
 
     def plot_v_adc(self):
         self.plot(title="Napięcie od czasu przetwornika A/C", y_scale=adc.Lsb, y_label="Napięcie [V]")
-        self.fft.plot_fft(y_scale=adc.Lsb)
+        self.fft.plot_fft(y_scale=self.adc.Lsb)
         # self.fft.print_harmonic_amplitudes(amp_scale=adc.Lsb)
-        self.signal_analyser.print_parameters(scale=adc.Lsb)
+        self.signal_analyser.print_parameters(scale=self.adc.Lsb)
 
     def plot_magnetic_field(self):
         offset = np.average(self.dac_values)
-        factor = adc.Lsb / self.ad8429.G / self.sensor.S * 1e6
+        factor = self.adc.Lsb / self.ad8429.G / self.sensor.S * 1e6
         self.plot(title="Pole magnetyczne od czasu z usuniętą składową stałą", y_scale=factor, y_label="Pole magnetycze [uT]", offset_calibration=offset)
         fft = FFT(signal=self.dac_values-offset, sampling_rate=Config.SAMPLING_RATE)
         fft.calculate()

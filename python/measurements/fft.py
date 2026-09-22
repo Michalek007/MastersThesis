@@ -115,15 +115,21 @@ class FFT:
                 'phase': self.phase[peak_idx],
             })
 
-    def print_harmonic_amplitudes(self, amp_scale=1.0, freq_scale=1.0, filename=None):
+    def print_harmonic_amplitudes(self, amp_scale=1.0, freq_scale=1.0, filename=None, RMS=True):
+        value_name = "amplitude"
+        if RMS:
+            amp_scale /= np.sqrt(2)
+            value_name = "RMS"
         print()
+        if filename:
+            print(filename)
         for h in self.harmonics_amp:
-            print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale} Hz | Amplitude = {h['amplitude']*amp_scale}| Phase = {h['phase']}")
+            print(f"H{h['harmonic']}: Freq = {h['frequency']*freq_scale} Hz | {value_name} = {h['amplitude']*amp_scale}| Phase = {h['phase']}")
         print()
         if filename:
             with open(filename, mode="w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(["harmonic", "frequency_hz", "amplitude", "phase"])
+                writer.writerow(["harmonic", "frequency_hz", value_name, "phase"])
                 for h in self.harmonics_amp:
                     writer.writerow(
                         [

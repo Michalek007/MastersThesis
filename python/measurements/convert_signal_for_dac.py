@@ -30,6 +30,7 @@ class CovertSignalForDAC:
         # max_value = min(amp, self.dac.Max_value)
         self.loaded_signal -= np.min(self.loaded_signal)
         self.dac_signal = np.round(self.loaded_signal * amp + offset).astype(np.uint16)
+        self.dac_signal += self.dac.Min_value
         np.clip(self.dac_signal, a_min=0, a_max=self.dac.Max_value, out=self.dac_signal)
 
     def plot(self):
@@ -47,7 +48,8 @@ class CovertSignalForDAC:
         plt.xlabel("Czas")
         plt.ylabel("Napięcie [V]")
         plt.grid(True)
-        plt.show()
+        # plt.show()
+        plt.savefig(f'graphs/{self.out_file.parts[-1].split(".")[0]}.png', dpi=500)
 
     def save(self):
         self.dac_signal.astype(np.uint16).tofile(self.out_file)

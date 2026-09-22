@@ -2,14 +2,15 @@ from measurements.signal_generator import SignalGenerator, Signal
 from measurements.signal_analyzer import SignalAnalyzer
 from measurements.convert_signal_for_dac import CovertSignalForDAC
 from calculations.helmholtz_coil import HelmholtzCoil, DAC, CurrentSource
-from harmonic_data import harmonic_500kv_under_line_nT, harmonic_220kv_nT
+from harmonic_data import *
 
 from pathlib import Path
+import math
 
 
 class MagneticFieldSignalGenerator:
     def __init__(self, B_1, DAC_V_offset, n_samples, harmonics_dict, signal_type: Signal, filename: Path, helmholtz_coil: HelmholtzCoil, current_source: CurrentSource, dac: DAC):
-        self.B_1 = B_1
+        self._B_1 = B_1 * math.sqrt(2)
         self.DAC_V_offset = DAC_V_offset
         self.n_samples = n_samples
         self.harmonics_dict = harmonics_dict
@@ -20,8 +21,16 @@ class MagneticFieldSignalGenerator:
         self.current_source = current_source
         self.dac = dac
 
+    @property
+    def B_1(self):
+        return self._B_1
+
+    @B_1.setter
+    def B_1(self, B_1_RMS):
+        self._B_1 = B_1_RMS * math.sqrt(2)
+
     def dac_value(self, B):
-        return self.dac.Value(B * self.helmholtz_coil.I_S * self.current_source.R_sense)
+        return self.dac.Value(B * self.helmholtz_coil.I_S * self.current_source.V_S)
 
     def generate(self):
         signal_generator = SignalGenerator(n_samples=self.n_samples, harmonics_dict=self.harmonics_dict, filename=self.filename)
@@ -30,8 +39,8 @@ class MagneticFieldSignalGenerator:
         scale_to_I_mA = self.B_1 * self.helmholtz_coil.I_S*1e3
 
         signal_generator.generate(signal_type=self.signal_type)
-        signal_generator.plot(amp=scale_to_B_uT, y_label="Pole magnetyczne [uT]")
-        signal_generator.plot(amp=scale_to_I_mA, y_label="Natężenie prądu [mA]")
+        signal_generator.plot(amp=scale_to_B_uT, y_label="Pole magnetyczne [uT]", save=True, name=signal_generator.name + "_B_uT")
+        signal_generator.plot(amp=scale_to_I_mA, y_label="Natężenie prądu [mA]", save=True, name=signal_generator.name + "_I_mA")
 
         signal_generator.fft.print_harmonic_amplitudes(amp_scale=scale_to_B_uT, freq_scale=50, filename=Path(f"data/{signal_generator.name}_harmonics_B_uT.csv"))
         signal_generator.fft.print_harmonic_amplitudes(amp_scale=scale_to_I_mA, freq_scale=50, filename=Path(f"data/{signal_generator.name}_harmonics_I_mA.csv"))
@@ -65,7 +74,7 @@ if __name__ == '__main__':
     #                              helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac).generate()
 
     mf_signal_generator = MagneticFieldSignalGenerator(
-        B_1=harmonic_500kv_under_line_nT[1]*1e-9, DAC_V_offset=0.3, harmonics_dict=harmonic_500kv_under_line_nT,
+        B_1=harmonic_500kv_under_line_nT[1]*1e-9, DAC_V_offset=0.1, harmonics_dict=harmonic_500kv_under_line_nT,
         n_samples=1000, signal_type=Signal.SINE, filename=Path("data/harmonic_500kv_under_line_nT_test.bin"),
         helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac
     )
@@ -75,4 +84,10 @@ if __name__ == '__main__':
     # mf_signal_generator.harmonics_dict = harmonic_220kv_nT
     # mf_signal_generator.B_1 = harmonic_220kv_nT[1] * 1e-9
     # mf_signal_generator.filename = Path("data/harmonic_220kv_nT_test.bin")
+    # mf_signal_generator.generate()
+
+    # helmholtz_coil.current_source.R_divider = 10
+    # mf_signal_generator.harmonics_dict = harmonic_400kV_1_8kA_I
+    # mf_signal_generator.B_1 = harmonic_400kV_1kA_10m_uT[1] * 1e-6
+    # mf_signal_generator.filename = Path("data/harmonic_400kV_1kA_10m_uT.bin")
     # mf_signal_generator.generate()

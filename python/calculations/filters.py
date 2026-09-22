@@ -31,3 +31,12 @@ if __name__ == '__main__':
 
     f = FilterRC(R=1e3, C=2.2e-9)
     print(f.freq_3dB)
+
+    f = FilterRC(R=1e3, C=3.3e-9)
+    print(f.freq_3dB)
+
+    f = FilterRC(R=r_parallel(1e3, 9.09e3), C=22e-9)
+    print(f.freq_3dB)
+
+    f = FilterRC(R=r_parallel(1e3, 1e3), C=33e-9)
+    print(f.freq_3dB)
