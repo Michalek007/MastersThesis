@@ -36,7 +36,7 @@
 #define P 2
 #define DATA_SIZE 1600 / OVR / 2
 #define UART_TX_BUF_SIZE DATA_SIZE * 2  // batch size
-#define UART_RX_BUF_SIZE 3
+#define UART_RX_BUF_SIZE 4
 #define SAMPLES_PER_SECOND 10000
 #define DAC_LUT_SIZE 1000
 
@@ -176,6 +176,44 @@ int main(void) {
 				} else {
 					dac_lut = dac_lut_rx;
 				}
+
+				switch (uartRxBuffer[3]) {
+				case 1:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279);
+					break; // 50 Hz
+				case 2:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 639);
+					break; // 100 Hz
+				case 4:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 319);
+					break; // 200 Hz
+				case 5:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 255);
+					break; // 250 Hz
+				case 8:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 159);
+					break; // 400 Hz
+				case 10:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 127);
+					break; // 500 Hz
+				case 16:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 79);
+					break; // 800 Hz
+				case 20:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 63);
+					break; // 1000 Hz
+				case 32:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 39);
+					break; // 1600 Hz
+				case 40:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 31);
+					break; // 2000 Hz
+				default:
+					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279); // Default 50 Hz
+					break;
+				}
+				htim2.Instance->EGR = TIM_EGR_UG;
+				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
 
 				HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
 				HAL_TIM_Base_Start(&htim2);

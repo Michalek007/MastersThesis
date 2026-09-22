@@ -68,7 +68,7 @@ class FFT:
         self.calculate()
         self.fft *= correction_factor
 
-    def plot_fft(self, y_scale=1, x_scale=1, x_lim=None, y_label="Amplituda", title="Widmo częstotliwościowe", save=False, filename="fft"):
+    def plot_fft(self, y_scale=1, x_scale=1, x_lim=None, y_label="Amplituda", title="Widmo częstotliwościowe", filename=None):
         plt.figure(figsize=(10, 5))
         plt.plot(self.freqs*x_scale, self.fft*y_scale, color='b')
 
@@ -84,8 +84,8 @@ class FFT:
         if x_lim:
             plt.xlim(0, x_lim)
         plt.tight_layout()
-        if save:
-            plt.savefig(f'graphs/{filename}.png', dpi=500)
+        if filename:
+            plt.savefig(filename, dpi=500)
         else:
             plt.show()
 

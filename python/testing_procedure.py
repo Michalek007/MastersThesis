@@ -12,7 +12,7 @@ from pathlib import Path
 
 class Config:
     GENERATE_DATA = 0
-    CAPTURE_DATA = 0
+    CAPTURE_DATA = 1
     PROCESS_DATA = 1
 
     SENSOR_VCC = 5
@@ -24,6 +24,10 @@ class Config:
     # SUT = "DRV425"
     # SUT = "DRV5055"
     # SUT = "HMC1001"
+
+    # TEST_PROCEDURE = "TP1"
+    TEST_PROCEDURE = "TP2"
+    # TEST_PROCEDURE = "TP3"
 
 
 if __name__ == '__main__':
@@ -46,6 +50,9 @@ if __name__ == '__main__':
             mf_signal_generator.B_1 = b1_rms
             mf_signal_generator.filename = Path(f"data/{name}.bin")
             mf_signal_generator.generate()
+
+    names_tp2 = ["sine_15_uT", "sine_20_uT", "sine_50_uT"]
+    k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
 
     # helmholtz_coil.current_source.R_divider = 2
     # b1_values_rms_small = [1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
@@ -78,29 +85,56 @@ if __name__ == '__main__':
 
     uart = UART(serial_port=UartConfig.SERIAL_PORT, baudrate=UartConfig.BAUDRATE, out_file=UartConfig.OUT_FILE,
                 batch_size=UartConfig.BATCH_SIZE)
-
     if Config.CAPTURE_DATA:
         uart.connect()
-        for name in names_tp1:
-            dac_file = Path(f"data/dac_{name}.bin")
-            out_file = Path(f"data/out_{Config.SUT}_{name}.bin")
-            uart.out_file = out_file
-            uart.send_waveform(dac_file)
-            uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT)
-            time.sleep(0.1)
+        if Config.TEST_PROCEDURE == "TP1":
+            for name in names_tp1:
+                dac_file = Path(f"data/dac_{name}.bin")
+                out_file = Path(f"data/out_{Config.SUT}_{name}.bin")
+                uart.out_file = out_file
+                uart.send_waveform(dac_file)
+                uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT)
+                time.sleep(0.1)
+        elif Config.TEST_PROCEDURE == "TP2":
+            for name in names_tp2:
+                for k in k_values:
+                    dac_file = Path(f"data/dac_{name}.bin")
+                    out_file = Path(f"data/out_{Config.SUT}_{name}_k{k}.bin")
+                    uart.out_file = out_file
+                    uart.send_waveform(dac_file)
+                    uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=k)
+                    time.sleep(0.1)
         uart.close()
 
     if Config.PROCESS_DATA:
-        for name in names_tp1:
-            out_file = Path(f"data/out_{Config.SUT}_{name}.bin")
-            data_reader = DataReader(filename=out_file, adc=adc)
-            data_reader.read()
-            data_reader.analyse_signal(scale_to_v=True)
-            data_reader.plot_scatter(periods=2, scale_to_v=True)
-            data_reader.plot_histogram(scale_to_v=True)
-            data_reader.plot(periods=2, scale_to_v=True)
-            data_reader.fft(scale_to_v=True)
+        if Config.TEST_PROCEDURE == "TP1":
+            for name in names_tp1:
+                out_file = Path(f"data/out_{Config.SUT}_{name}.bin")
+                data_reader = DataReader(filename=out_file, adc=adc)
+                data_reader.read()
+                # data_reader.analyse_signal(scale_to_v=True)
+                # data_reader.plot_scatter(periods=2, scale_to_v=True)
+                # data_reader.plot_histogram(scale_to_v=True)
+                # data_reader.plot(periods=2, scale_to_v=True)
+                # data_reader.fft(scale_to_v=True)
 
-            sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g2)
-            # sp_alt021.plot_v_adc()
-            sp_alt021.plot_magnetic_field()
+                sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g2, out_name=f"{Config.SUT}_{name}")
+                # sp_alt021.plot_v_adc()
+                sp_alt021.plot_magnetic_field()
+        elif Config.TEST_PROCEDURE == "TP2":
+            for name in names_tp2:
+                for k in k_values:
+                    out_file = Path(f"data/out_{Config.SUT}_{name}_k{k}.bin")
+                    data_reader = DataReader(filename=out_file, adc=adc, freq=k*50)
+                    data_reader.read()
+                    data_reader.analyse_signal(scale_to_v=True)
+                    data_reader.fft(scale_to_v=True)
+                    # data_reader.plot_scatter(periods=2, scale_to_v=True)
+                    # data_reader.plot_histogram(scale_to_v=True)
+                    # data_reader.plot(periods=2, scale_to_v=True)
+
+                    sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g2,
+                                                 out_name=f"{Config.SUT}_{name}_k{k}")
+                    sp_alt021.calculate_magnetic_filed_harmonics()
+                    # # sp_alt021.plot_v_adc()
+                    # sp_alt021.plot_magnetic_field()

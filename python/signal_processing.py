@@ -37,7 +37,7 @@ class Config:
 
 
 class SignalProcessing:
-    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429):
+    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429, out_name=None):
         self.dac_values = np.array(dac_values, dtype=np.float64)
         self.n_samples = len(dac_values)
         self.t = [i * Config.TIME_STEP for i in range(self.n_samples)]
@@ -48,8 +48,9 @@ class SignalProcessing:
         self.fft.calculate()
         self.fft.get_harmonic_amplitudes(f0=50, num_harmonics=50)
         self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
+        self.name = out_name
 
-    def plot(self, title, y_scale = 1, periods: int = 5, y_label = "Amplitude", offset_calibration=0, save=False, filename='graph'):
+    def plot(self, title, y_scale=1, periods: int = 5, y_label = "Amplitude", offset_calibration=0, save=False, filename='graph'):
         plt.figure()
         plt.plot(self.t[0:int(Config.SAMPLES_PER_PERIOD*periods)], (self.dac_values[0:int(Config.SAMPLES_PER_PERIOD*periods)]-offset_calibration) * y_scale)
         plt.title(title)
@@ -58,7 +59,7 @@ class SignalProcessing:
         plt.grid(True)
         plt.tight_layout()
         if save:
-            plt.savefig(f'graphs/{filename}.png', dpi=500)
+            plt.savefig(f'results/graphs/{filename}.png', dpi=500)
         else:
             plt.show()
 
@@ -68,21 +69,34 @@ class SignalProcessing:
         # self.fft.print_harmonic_amplitudes(amp_scale=adc.Lsb)
         self.signal_analyser.print_parameters(scale=self.adc.Lsb)
 
+    def plot_current(self):
+        pass
+
     def plot_magnetic_field(self):
         offset = np.average(self.dac_values)
         factor = self.adc.Lsb / self.ad8429.G / self.sensor.S * 1e6
-        self.plot(title="Pole magnetyczne od czasu z usuniętą składową stałą", y_scale=factor, y_label="Pole magnetycze [uT]", offset_calibration=offset)
+        self.plot(title="Pole magnetyczne od czasu", y_scale=factor, y_label="Pole magnetyczne [μT]", offset_calibration=offset, save=True, filename=f"{self.name}_B_uT")
         fft = FFT(signal=self.dac_values-offset, sampling_rate=Config.SAMPLING_RATE)
         fft.calculate()
-        fft.plot_fft(y_scale=factor)
-        SignalAnalyzer(signal=self.dac_values-offset).print_parameters(scale=factor)
+        fft.plot_fft(y_scale=factor, y_label="Pole magnetyczne [μT]", x_lim=2500, filename=Path(f"results/graphs/fft_{self.name}_B_uT.png"))
+        fft.get_harmonic_amplitudes(f0=50)
+        fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_B_uT.csv"))
+        SignalAnalyzer(signal=self.dac_values-offset).print_parameters(scale=factor, filename=Path(f"results/{self.name}_B_uT.csv"))
 
-        ad8429_offset = self.adc.Value(Config.AD8429_V_REF)
-        self.plot(title="Pole magnetyczne od czasu", y_scale=factor, y_label="Pole magnetycze [uT]", offset_calibration=ad8429_offset)
-        fft = FFT(signal=self.dac_values-ad8429_offset, sampling_rate=Config.SAMPLING_RATE)
+        # ad8429_offset = self.adc.Value(Config.AD8429_V_REF)
+        # self.plot(title="Pole magnetyczne od czasu z DC", y_scale=factor, y_label="Pole magnetyczne [μT]", offset_calibration=ad8429_offset)
+        # fft = FFT(signal=self.dac_values-ad8429_offset, sampling_rate=Config.SAMPLING_RATE)
+        # fft.calculate()
+        # fft.plot_fft(y_scale=factor)
+        # SignalAnalyzer(self.dac_values-ad8429_offset).print_parameters(scale=factor)
+
+    def calculate_magnetic_filed_harmonics(self):
+        factor = self.adc.Lsb / self.ad8429.G / self.sensor.S * 1e6
+        fft = FFT(signal=self.dac_values, sampling_rate=Config.SAMPLING_RATE, remove_offset=True)
         fft.calculate()
-        fft.plot_fft(y_scale=factor)
-        SignalAnalyzer(self.dac_values-ad8429_offset).print_parameters(scale=factor)
+        fft.get_harmonic_amplitudes(f0=50)
+        fft.plot_fft(y_scale=factor, y_label="Pole magnetyczne [μT]", x_lim=2500)
+        fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_B_uT.csv"))
 
 
 if __name__ == '__main__':

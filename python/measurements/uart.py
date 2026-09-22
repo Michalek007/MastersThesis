@@ -56,15 +56,15 @@ class UART:
     def close(self):
         self.serial.close()
 
-    def create_start_packet(self, command_byte="S", record_seconds=1, waveform_value=0, k=1):
-        return bytes([ord(command_byte), record_seconds, waveform_value, k])
+    # def create_start_packet(self, command_byte="S", record_seconds=1, waveform_value=0, k=1):
+    #     return bytes([ord(command_byte), record_seconds, waveform_value, k])
 
     def capture(self, record_seconds, waveform: Waveform, k=1):
         print(f"Recording for {record_seconds} seconds...")
 
         buffer = bytearray()
         with open(self.out_file, "wb") as f:
-            start_packet = bytes([ord("S"), record_seconds, waveform.value])
+            start_packet = bytes([ord("S"), record_seconds, waveform.value, k])
             self.serial.write(start_packet)
             data = 1
             while data:
@@ -78,7 +78,7 @@ class UART:
         print("Capture complete.")
 
     def send_waveform(self, filename):
-        start_packet = bytes([ord("R"), 0, 0])
+        start_packet = bytes([ord("R"), 0, 0, 1])
         self.serial.write(start_packet)
         # time.sleep(0.1)
 
@@ -94,7 +94,7 @@ class UART:
 
 
 class DataReader:
-    def __init__(self, filename: Path, adc: ADC = None):
+    def __init__(self, filename: Path, adc: ADC = None, freq=50):
         self.filename = filename
         self.count = None
         self.values = None
@@ -103,6 +103,9 @@ class DataReader:
         self.adc = adc
         self.v_adc = None
         self.t = None
+
+        self.freq = freq
+        self.samples_per_period = UartConfig.SAMPLING_RATE / self.freq
 
     def read(self):
         with open(self.filename, "rb") as f:
@@ -125,7 +128,7 @@ class DataReader:
         y = self.values if not scale_to_v else self.v_adc
         x = self.x if not scale_to_v else self.t
         plt.figure()
-        plt.plot(x[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], y[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)])
+        plt.plot(x[0:int(self.samples_per_period*periods)], y[0:int(self.samples_per_period*periods)])
         plt.title("Raw data" if not scale_to_v else "VADC")
         plt.xlabel("Sample index" if not scale_to_v else "Time [s]")
         plt.ylabel("Value" if not scale_to_v else "Voltage [V]")
@@ -137,7 +140,7 @@ class DataReader:
         y = self.values if not scale_to_v else self.v_adc
         x = self.x if not scale_to_v else self.t
         plt.figure()
-        plt.scatter(x[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], y[0:int(UartConfig.SAMPLES_PER_PERIOD*periods)], s=0.5)
+        plt.scatter(x[0:int(self.samples_per_period*periods)], y[0:int(self.samples_per_period*periods)], s=0.5)
         plt.title("Raw data" if not scale_to_v else "VADC")
         plt.xlabel("Sample index" if not scale_to_v else "Time [s]")
         plt.ylabel("Value" if not scale_to_v else "Voltage [V]")
@@ -184,30 +187,32 @@ def rc_filter_numpy(data, fs=10_000, R=1000, C=22e-9):
 
 
 if __name__ == "__main__":
+    k = 20
     uart = UART(serial_port=UartConfig.SERIAL_PORT, baudrate=UartConfig.BAUDRATE, out_file=UartConfig.OUT_FILE, batch_size=UartConfig.BATCH_SIZE)
     uart.connect()
+    uart.send_waveform(filename=Path('data/dac_sine_50_uT.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine_100.bin'))
     # uart.send_waveform(filename=Path('data/dac_dc.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_signal_odd_harmonics.bin'))
     # time.sleep(0.1)
-    uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT)
+    uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT, k=k)
     # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
-    # uart.capture(record_seconds=5, waveform=Waveform.SINE)
+    # uart.capture(record_seconds=5, waveform=Waveform.SINE, k=k)
     # uart.capture(record_seconds=5, waveform=Waveform.SINE_ODD_HARMONICS)
     uart.close()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
-    data_reader = DataReader(filename=Path(UartConfig.OUT_FILE), adc=adc)
+    data_reader = DataReader(filename=Path(UartConfig.OUT_FILE), adc=adc, freq=k*50)
     data_reader.read()
-    data_reader.plot_scatter(periods=5)
+    data_reader.plot_scatter(periods=2)
     data_reader.plot_histogram()
     data_reader.plot(periods=2)
     data_reader.fft()
     data_reader.analyse_signal(scale_to_v=False)
 
-    data_reader.plot_scatter(periods=5, scale_to_v=True)
+    data_reader.plot_scatter(periods=2, scale_to_v=True)
     data_reader.plot_histogram(scale_to_v=True)
     data_reader.plot(periods=2, scale_to_v=True)
     data_reader.fft(scale_to_v=True)
