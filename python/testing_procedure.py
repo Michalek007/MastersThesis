@@ -13,7 +13,7 @@ from pathlib import Path
 
 class Config:
     GENERATE_DATA = 0
-    CAPTURE_DATA = 1
+    CAPTURE_DATA = 0
     PROCESS_DATA = 1
 
     SENSOR_VCC = 5
@@ -26,35 +26,43 @@ class Config:
     # SUT = "DRV5055"
     # SUT = "HMC1001"
 
-    LOW_SIGNALS = 0
+    # ALL_SIGNALS = 1
+    LOW_SIGNALS = 1
+
+    GAIN = "2"
+    # GAIN = "30"
+
+    R_DIVIDER = "1"
+    # R_DIVIDER = "2"
 
     # TEST_PROCEDURE = "TP0"
-    # TEST_PROCEDURE = "TP1"
-    TEST_PROCEDURE = "TP2"
+    TEST_PROCEDURE = "TP1"
+    # TEST_PROCEDURE = "TP2"
     # TEST_PROCEDURE = "TP3"
 
 
 if __name__ == '__main__':
     dac = DAC(vcc=3.3, resolution_bits=12, buffer_enabled=True)
     current_source = CurrentSource(R=7.5, dac=dac)
-    # if Config.LOW_SIGNALS:
-    #     current_source.R_divider = 2
+    if Config.R_DIVIDER == "2":
+        current_source.R_divider = 2
     helmholtz_coil = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
     # helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=0.5176*1e-6/1e-3)
 
     mf_signal_generator = MagneticFieldSignalGenerator(
         B_1=10e-6, DAC_V_offset=0.1, harmonics_dict={1: 1.0},
-        n_samples=1000, signal_type=Signal.SINE, filename=Path("data/sine_10_uT.bin"),
+        n_samples=1000, signal_type=Signal.SINE, filename=Path(f"data/sine_10_uT_{Config.R_DIVIDER}.bin"),
         helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac
     )
     if Config.LOW_SIGNALS:
-        b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
+        # b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
+        b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6, 15e-6, 20e-6, 25e-6, 30e-6, 35e-6, 40e-6, 45e-6]
     else:
         b1_values_rms = [15e-6, 20e-6, 25e-6, 30e-6, 35e-6, 40e-6, 45e-6, 50e-6, 55e-6, 60e-6]
 
     names_tp1 = []
     for b1_rms in b1_values_rms:
-        name = f"sine_{int(b1_rms*1e6)}_uT"
+        name = f"sine_{int(b1_rms*1e6)}_uT_RD{Config.R_DIVIDER}"
         names_tp1.append(name)
         if Config.GENERATE_DATA and Config.TEST_PROCEDURE == "TP1":
             mf_signal_generator.B_1 = b1_rms
@@ -62,9 +70,9 @@ if __name__ == '__main__':
             mf_signal_generator.generate()
 
     if Config.LOW_SIGNALS:
-        names_tp2 = ["sine_1_uT", "sine_5_uT", "sine_10_uT"]
+        names_tp2 = [f"sine_1_uT_RD{Config.R_DIVIDER}", f"sine_5_uT_RD{Config.R_DIVIDER}", f"sine_10_uT_RD{Config.R_DIVIDER}"]
     else:
-        names_tp2 = ["sine_15_uT", "sine_20_uT", "sine_50_uT"]
+        names_tp2 = [f"sine_15_uT_RD{Config.R_DIVIDER}", f"sine_20_uT_RD{Config.R_DIVIDER}", f"sine_50_uT_RD{Config.R_DIVIDER}"]
     k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
 
     if Config.LOW_SIGNALS:
@@ -77,7 +85,7 @@ if __name__ == '__main__':
     names_tp3 = []
     for value_name, value in tp3_b1_values_rms.items():
         for harmonic_name, harmonics_data in harmonics_data_dicts.items():
-            name = f"harmonic_{value_name}_{harmonic_name}"
+            name = f"harmonic_{value_name}_{harmonic_name}_RD{Config.R_DIVIDER}"
             names_tp3.append(name)
             mf_signal_generator.filename = Path(f"in/{name}.bin")
 
@@ -107,8 +115,8 @@ if __name__ == '__main__':
     # mf_signal_generator.generate()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
-    ad8429_g2 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=2)
-    ad8429_g30 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=30)
+    ad8429_g2 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
+    ad8429_g30 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
 
     alt021 = ALT021(vcc=Config.SENSOR_VCC)
     hmc1001 = HMC1001(vcc=Config.SENSOR_VCC)
@@ -120,7 +128,7 @@ if __name__ == '__main__':
     if Config.SUT == "ALT021":
         sensor = alt021
         ad8429 = ad8429_g2
-        if Config.LOW_SIGNALS:
+        if Config.GAIN == "30":
             ad8429 = ad8429_g30
     elif Config.SUT == "DRV425":
         sensor = drv425
@@ -225,7 +233,7 @@ if __name__ == '__main__':
                     # data_reader.plot_scatter(periods=2, scale_to_v=True)
                     # data_reader.plot_histogram(scale_to_v=True)
                     # data_reader.plot(periods=2, scale_to_v=True)
-                    data_reader_ref = DataReader(filename=out_ref_file, adc=adc)
+                    data_reader_ref = DataReader(filename=out_file_ref, adc=adc)
                     data_reader_ref.read()
 
                     sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g2,

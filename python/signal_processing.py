@@ -24,7 +24,7 @@ class Config:
 
 
 class SignalProcessing:
-    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429, out_name=None, helmholtz_coil: HelmholtzCoil = None, freq=50):
+    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429, out_name=None, out_dir=None, helmholtz_coil: HelmholtzCoil = None, freq=50):
         self.dac_values = np.array(dac_values, dtype=np.float64)
         self.offset = np.mean(self.dac_values)
         self.n_samples = len(dac_values)
@@ -37,6 +37,7 @@ class SignalProcessing:
         self.fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
         self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
         self.name = out_name
+        self.out_dir = out_dir if out_dir else "results"
 
         self.helmholtz_coil = helmholtz_coil
         self.freq = freq
@@ -67,7 +68,7 @@ class SignalProcessing:
         plt.grid(True)
         plt.tight_layout()
         if save:
-            plt.savefig(f'results/graphs/{filename}.png', dpi=500)
+            plt.savefig(f'{self.out_dir}/graphs/{filename}.png', dpi=500)
         else:
             plt.show()
 
@@ -77,8 +78,8 @@ class SignalProcessing:
         self.fft.plot_fft(y_scale=factor, x_lim=2500, y_label="Napięcie [mV]"
                           # , filename=Path(f"results/graphs/{self.name}_fft_Vadc_mV.png")
                          )
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_Vsensor_mV.csv"))
-        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"results/{self.name}_Vsensor_mV.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_Vsensor_mV.csv"))
+        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_Vsensor_mV.csv"))
 
     def plot_v_adc(self):
         factor = self.adc.Lsb * 1e3
@@ -86,8 +87,8 @@ class SignalProcessing:
         self.fft.plot_fft(y_scale=factor, x_lim=2500, y_label="Napięcie [mV]"
                           # , filename=Path(f"results/graphs/{self.name}_fft_Vadc_mV.png")
                          )
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_Vadc_mV.csv"))
-        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"results/{self.name}_Vadc_mV.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_Vadc_mV.csv"))
+        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_Vadc_mV.csv"))
 
     def plot_current(self):
         if not self.helmholtz_coil:
@@ -97,8 +98,8 @@ class SignalProcessing:
         self.fft.plot_fft(y_scale=factor, x_lim=2500, y_label="Natężenie prądu [mA]"
                           # , filename=Path(f"results/graphs/{self.name}_fft_I_mA.png")
                           )
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_I_mA.csv"))
-        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"results/{self.name}_I_mA.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_I_mA.csv"))
+        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_I_mA.csv"))
 
     def plot_magnetic_field(self):
         # offset = np.average(self.dac_values)
@@ -109,10 +110,10 @@ class SignalProcessing:
         self.plot(title="Pole magnetyczne od czasu", y_scale=factor, y_label="Pole magnetyczne [μT]", offset_calibration=self.offset, save=True, filename=f"{self.name}_B_uT")
         # fft = FFT(signal=self.dac_values-offset, sampling_rate=Config.SAMPLING_RATE)
         # fft.calculate()
-        self.fft.plot_fft(y_scale=factor, y_label="Pole magnetyczne [μT]", x_lim=2500, filename=Path(f"results/graphs/{self.name}_fft_B_uT.png"))
+        self.fft.plot_fft(y_scale=factor, y_label="Pole magnetyczne [μT]", x_lim=2500, filename=Path(f"{self.out_dir}/graphs/{self.name}_fft_B_uT.png"))
         # self.fft.get_harmonic_amplitudes(f0=50)
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_B_uT.csv"))
-        SignalAnalyzer(signal=self.dac_values-self.offset).print_parameters(scale=factor, filename=Path(f"results/{self.name}_B_uT.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_B_uT.csv"))
+        SignalAnalyzer(signal=self.dac_values-self.offset).print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_B_uT.csv"))
 
     def plot_magnetic_field_dc(self):
         pass
@@ -132,7 +133,7 @@ class SignalProcessing:
         # fft.calculate()
         # fft.get_harmonic_amplitudes(f0=50)
         self.fft.plot_fft(y_scale=factor, y_label="Pole magnetyczne [μT]", x_lim=2500)
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"results/{self.name}_harmonics_B_uT.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_B_uT.csv"))
 
 
 if __name__ == '__main__':
@@ -142,11 +143,16 @@ if __name__ == '__main__':
                 batch_size=UartConfig.BATCH_SIZE)
     if UART_CAPTURE:
         uart.connect()
+
+        # uart.send_waveform(filename=Path('in/dac_sine_0_uT_RD1.bin'))
+        # uart.send_waveform(filename=Path('in/dac_sine_3_uT_RD1.bin'))
+        uart.send_waveform(filename=Path('in/dac_sine_20_uT_RD1.bin'))
+        # uart.send_waveform(filename=Path('in/harmonic_7_5uT_220kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_400kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_220kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_500kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_THD29.bin'))
-        uart.send_waveform(filename=Path('data/dac_sine_50_uT.bin'))
+        # uart.send_waveform(filename=Path('data/dac_sine_50_uT.bin'))
         # uart.send_waveform(filename=Path('data/dac_dc_50ut.bin'))
 
         uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=1)
@@ -158,7 +164,7 @@ if __name__ == '__main__':
     adc = ADC(vcc=3.3, resolution_bits=16)
     data_reader = DataReader(filename=uart.out_file, adc=adc)
     data_reader.read()
-    # data_reader.analyse_signal()
+    data_reader.analyse_signal()
     # data_reader.plot_scatter(periods=2)
     # data_reader.plot_histogram()
     # data_reader.plot(periods=2)
@@ -179,7 +185,7 @@ if __name__ == '__main__':
     drv425 = DRV425(vcc=Config.SENSOR_VCC, R_shunt=100)
 
     sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g30, out_name="TEST_ALT021")
-    # sp_alt021.plot_magnetic_field()
+    sp_alt021.plot_magnetic_field()
     # sp_alt021.plot_v_sensor()
 
     dac = DAC(vcc=3.3, resolution_bits=12, buffer_enabled=True)

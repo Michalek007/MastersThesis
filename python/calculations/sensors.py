@@ -125,7 +125,7 @@ if __name__ == "__main__":
     drv5055 = DRV5055(vcc=Constants.Vcc)
     drv425 = DRV425(vcc=Constants.Vcc, R_shunt=100)
 
-    ad8429 = AD8429(vs_positive=6.968, vs_negative=-6.577, v_reference=adc.Vcc/2, gain=2)
+    ad8429 = AD8429(vs_positive=6.968, vs_negative=-6.577, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
     print("AD8429: ")
     print("Vs+ [V]: ", ad8429.Vs_p)
     print("Vs- [V]: ", ad8429.Vs_n)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     print("Vin_min [V]: ", ad8429.Vin_min)
     print()
 
-    ad8429_g30 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=30)
+    ad8429_g30 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
     print("HMC1001: ")
     print("S [mV/mT]: ", hmc1001.S, "; after AD8429: ", hmc1001.S * ad8429_g30.G)
     print("Vout_max [V]: ", hmc1001.Vout_max(Constants.B_max))
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     print("Vout_min [V]: ", ad8429_g50.Vout(drv5055.Vout_min(Constants.B_min), drv5055.Offset))
     print()
 
-    ad8429_g2 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=2)
+    ad8429_g2 = AD8429(vs_positive=7.77, vs_negative=-8.6, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
     print("DRV425: ")
     print("Rshunt [Ohm]: ", drv425.R_shunt)
     print("S [mV/mT]: ", drv425.S, "; after AD8429: ", drv425.S * ad8429_g2.G)
@@ -174,8 +174,10 @@ if __name__ == "__main__":
     print("Vout_max [V]: ", ad8429_g2.Vout(alt021.Vout_max(Constants.B_max), alt021.Offset))
     print("Vout_min [V]: ", ad8429_g2.Vout(alt021.Vout_min(Constants.B_min), alt021.Offset))
     print("B_max G=2[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g2.G / alt021.S * 1e6)
-    print("B_max G=30[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g30.G / alt021.S * 1e6)
     print()
-
-    ad8429_g30 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
-    print(ad8429_g30.G)
+    print("ALT021->AD8429: Vref [V]: ", ad8429_g30.V_ref, "; Gain: ", ad8429_g30.G)
+    print("Vout_max [V]: ", ad8429_g30.Vout(alt021.Vout_max(Constants.B_max), alt021.Offset))
+    print("Vout (B=30uT) [V]: ", ad8429_g30.Vout(alt021.Vout(-30e-6), alt021.Offset))
+    print("Vout_max [V]: ", ad8429_g30.Vout(alt021.Vout_max(Constants.B_max), alt021.Offset))
+    print("B_max G=30[uT]: ", (Constants.Vcc - ad8429_g30.V_ref)/ad8429_g30.G / alt021.S * 1e6)
+    print()
