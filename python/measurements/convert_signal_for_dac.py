@@ -21,7 +21,7 @@ class CovertSignalForDAC:
         self.dac_signal = None
         self.out_file = out_file
         if not self.out_file:
-            self.out_file = Path("data/dac_" + self.filename.parts[-1])
+            self.out_file = Path(self.filename.parts[-2] + "/dac_" + self.filename.parts[-1])
 
     def load_signal(self):
         self.loaded_signal = np.fromfile(self.filename, dtype=np.float32)

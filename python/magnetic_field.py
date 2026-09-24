@@ -74,7 +74,7 @@ if __name__ == '__main__':
     #                              helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac).generate()
 
     mf_signal_generator = MagneticFieldSignalGenerator(
-        B_1=harmonic_500kv_under_line_nT[1]*1e-9, DAC_V_offset=0.1, harmonics_dict=harmonic_500kv_under_line_nT,
+        B_1=harmonic_500kv_under_line_nT[1]*1e-9, DAC_V_offset=0.1, harmonics_dict=harmonic_220kv_nT,
         n_samples=1000, signal_type=Signal.SINE, filename=Path("data/harmonic_500kv_under_line_nT_test.bin"),
         helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac
     )

@@ -39,8 +39,8 @@ if __name__ == '__main__':
     print("Divider: ", v_divider.Divider)
     print("Vout: ", v_divider.Vout)
 
-    R1 = 1e3
-    R2 = 1e3
+    R1 = 10e3
+    R2 = 10e3
     RZ = r_parallel(R1, R2)
     print("RZ: ", RZ)
     v_divider = VoltageDivider(r1=R1, r2=R2, vcc=3.3)

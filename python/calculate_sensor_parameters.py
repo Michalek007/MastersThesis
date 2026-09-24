@@ -1,3 +1,6 @@
+from measurements.fft import FFT
+
+
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -57,7 +60,7 @@ class CalculateSensorParams:
         Returns the fundamental (h=1) RMS and calculates THD (%).
         """
         fundamental_rms = None
-        harmonics_rms = []
+        harmonics_rms = {}
 
         with open(filepath, mode='r', encoding='utf-8') as f:
             reader = csv.reader(f)
@@ -69,8 +72,7 @@ class CalculateSensorParams:
                     rms = float(row[2].strip())
                     if h == 1:
                         fundamental_rms = rms
-                    elif h > 1:
-                        harmonics_rms.append(rms)
+                    harmonics_rms[h] = rms
                 except (ValueError, IndexError):
                     pass
 
@@ -78,12 +80,11 @@ class CalculateSensorParams:
             raise ValueError(f"Could not extract fundamental RMS (h=1) from {filepath}")
 
         # Calculate THD (Total Harmonic Distortion) in percent
-        thd_pct = 0.0
-        if harmonics_rms:
-            sum_of_squares = sum(v ** 2 for v in harmonics_rms)
-            thd_pct = (np.sqrt(sum_of_squares) / fundamental_rms) * 100.0
-
-        return fundamental_rms, thd_pct
+        # thd_pct = 0.0
+        # if harmonics_rms:
+        #     sum_of_squares = sum(v ** 2 for v in harmonics_rms)
+        #     thd_pct = (np.sqrt(sum_of_squares) / fundamental_rms) * 100.0
+        return fundamental_rms, FFT.calculate_thd_from_dict(harmonics_dict=harmonics_rms, as_percentage=True)
 
     def load_data(self):
         """Loads and parses all specified files."""
@@ -140,7 +141,7 @@ class CalculateSensorParams:
             "Max_INL_Error_%": self.inl_max_pct
         }
 
-    def plot_graphs(self):
+    def plot_graphs(self, x_label=None, y_label=None):
         """Plots the AC Transfer Curve and Dynamic Linearity (THD)."""
         if self.sensitivity is None:
             self.calculate_params()
@@ -150,16 +151,16 @@ class CalculateSensorParams:
         # --- Plot 1: Amplitude Linearity (Krzywa transferu AC) ---
         ideal_fit = self.sensitivity * self.ref_fundamental + self.intercept
 
-        ax1.scatter(self.ref_fundamental, self.meas_fundamental, color='red', label='Measured 50 Hz RMS', zorder=5)
-        ax1.plot(self.ref_fundamental, ideal_fit, 'b--', label='Ideal Linear Fit')
+        ax1.scatter(self.ref_fundamental, self.meas_fundamental, color='red', label='Pole magnetyczne zmierzone 50 Hz RMS', zorder=5)
+        ax1.plot(self.ref_fundamental, ideal_fit, 'b--', label='Dopasowanie liniowe')
 
-        ax1.set_title('Amplitude Linearity (50Hz AC Transfer Curve)')
-        ax1.set_xlabel('Reference Field 50Hz RMS (Input)')
-        ax1.set_ylabel('Sensor Output 50Hz RMS (Measured)')
+        ax1.set_title('Liniowość amplitudy dla częstotliwości 50Hz')
+        ax1.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [uT]')
+        ax1.set_ylabel('Pole magnetyczne zmierzone [uT]')
 
         metrics_text = (f"R² (Determinacja): {self.r_squared:.6f}\n"
-                        f"Max INL: {self.inl_max_pct:.3f}% FS\n"
-                        f"Sensitivity: {self.sensitivity:.4f}")
+                        f"INL: {self.inl_max_pct:.3f}% FS\n"
+                        f"Czułość: {self.sensitivity:.4f}")
         ax1.text(0.05, 0.95, metrics_text, transform=ax1.transAxes,
                  va='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
@@ -169,31 +170,53 @@ class CalculateSensorParams:
         # --- Plot 2: Dynamic Linearity (Analiza THD vs Amplituda) ---
         ax2.plot(self.ref_fundamental, self.meas_thd, marker='o', color='green', linestyle='-', linewidth=2)
 
-        ax2.set_title('Dynamic Linearity (THD vs Amplitude)')
-        ax2.set_xlabel('Reference Field 50Hz RMS (Amplitude)')
-        ax2.set_ylabel('Measured THD (%)')
+        ax2.set_title('Liniowiość dynamiczna (THD a wartość skuteczna sygnału)')
+        ax2.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS')
+        ax2.set_ylabel('THD zmierzonego pola magnetycznego [%])')
 
         ax2.set_ylim(bottom=0)
         ax2.grid(True, linestyle=':', alpha=0.7)
+
+        if x_label:
+            ax1.set_xlabel(x_label)
+            ax2.set_xlabel(x_label)
+        if y_label:
+            ax1.set_ylabel(y_label)
 
         plt.tight_layout()
         plt.show()
 
 
 if __name__ == '__main__':
-    b_values = [15, 20, 25, 30, 40, 50]
-    name = 'ALT021_sine_15_uT_B_uT.csv'
-    harmonics_name = 'ALT021_sine_15_uT_B_uT.csv'
+    b_values = [0, 1, 3, 5, 7, 10]
+    # b_values = [15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+    # b_values = [30, 35, 40, 45, 50, 55, 60]
+    # b_values = [15, 20, 25, 30, 35]
+    # name = 'ALT021_sine_15_uT_B_uT.csv'
+    # harmonics_name = 'ALT021_sine_15_uT_B_uT.csv'
     ref_files = []
     meas_files = []
     ref_harmonic_files = []
     meas_harmonic_files = []
     for b in b_values:
-        ref_files.append(Path(f"data/sine_{b}_uT_B_uT.csv"))
-        ref_harmonic_files.append(Path(f"data/sine_{b}_uT_harmonics_B_uT.csv"))
+        ref_files.append(Path(f"results/ALT021_sine_{b}_uT_ref_I_mA.csv"))
+        ref_harmonic_files.append(Path(f"results/ALT021_sine_{b}_uT_ref_harmonics_I_mA.csv"))
 
         meas_files.append(Path(f"results/ALT021_sine_{b}_uT_B_uT.csv"))
         meas_harmonic_files.append(Path(f"results/ALT021_sine_{b}_uT_harmonics_B_uT.csv"))
+    #
+    # sensor = CalculateSensorParams(measured_files=meas_files, reference_files=ref_files, harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files)
+    # params = sensor.calculate_params()
+    # sensor.plot_graphs()
+
+    # for b in b_values:
+    #     ref_files.append(Path(f"results/ALT021_sine_{b}_uT_ref_B_uT.csv"))
+    #     ref_harmonic_files.append(Path(f"results/ALT021_sine_{b}_uT_ref_harmonics_B_uT.csv"))
+    #
+    #     # meas_files.append(Path(f"results/ALT021_sine_{b}_uT_B_uT.csv"))
+    #     # meas_harmonic_files.append(Path(f"results/ALT021_sine_{b}_uT_harmonics_B_uT.csv"))
+    #     meas_files.append(Path(f"results/ALT021_sine_{b}_uT_Vsensor_mV.csv"))
+    #     meas_harmonic_files.append(Path(f"results/ALT021_sine_{b}_uT_harmonics_Vsensor_mV.csv"))
 
     sensor = CalculateSensorParams(measured_files=meas_files, reference_files=ref_files, harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files)
     params = sensor.calculate_params()

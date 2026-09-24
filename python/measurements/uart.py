@@ -29,15 +29,17 @@ class UartConfig:
     BATCH_SIZE = 400  # data sent in one burst [bytes]
     RECORD_SECONDS = 5
     OUT_FILE = Path(f"data/uart_capture_{datetime.now().strftime('%Y%m%d_%H%M')}.bin")
+    # OUT_FILE = Path(f"data/uart_capture_test.bin")
     VCC = 3.3
     V_REF = VCC/2
 
 
 class UART:
-    def __init__(self, serial_port, baudrate, out_file, batch_size=400, timeout=0.1):
+    def __init__(self, serial_port, baudrate, out_file: Path, batch_size=400, timeout=2):
         self.serial_port = serial_port
         self.baudrate = baudrate
         self.out_file = out_file
+        self.out_ref_file = self.out_file.with_name(f"{self.out_file.stem}_ref{self.out_file.suffix}")
         self.batch_size = batch_size
         self.timeout = timeout
         self.serial: serial.Serial
@@ -63,18 +65,47 @@ class UART:
         print(f"Recording for {record_seconds} seconds...")
 
         buffer = bytearray()
+        collected_bytes = 0
+        target_bytes = UartConfig.SAMPLING_RATE * record_seconds * 2
         with open(self.out_file, "wb") as f:
             start_packet = bytes([ord("S"), record_seconds, waveform.value, k])
             self.serial.write(start_packet)
             data = 1
             while data:
+                if collected_bytes == target_bytes:
+                    break
+
                 data = self.serial.read(self.batch_size - len(buffer))
                 if data:
                     buffer.extend(data)
 
                 if len(buffer) == self.batch_size:
+                    collected_bytes += self.batch_size
                     f.write(buffer)
                     buffer.clear()
+
+        with open(self.out_ref_file, "wb") as f:
+            n_bytes = int(UartConfig.SAMPLING_RATE * record_seconds * 2)
+            data = self.serial.read(n_bytes)
+            f.write(data)
+
+        # with open(self.out_ref_file, "wb") as f:
+        #     n_bytes = int(UartConfig.SAMPLING_RATE * record_seconds * 2)
+        #     collected_ref_bytes = 0
+        #
+        #     while collected_ref_bytes < n_bytes:
+        #         # Pytaj o resztę brakujących danych, ale nie więcej niż np. wielkość batch_size
+        #         bytes_to_read = min(self.batch_size, n_bytes - collected_ref_bytes)
+        #         data = self.serial.read(bytes_to_read)
+        #
+        #         if not data:
+        #             # Wyjście z pętli w razie braku danych (np. wyczerpanie timeoutu bez żadnych nowych bajtów)
+        #             print(f"Warning: Serial timeout! Otrzymano {collected_ref_bytes}/{n_bytes} bajtów.")
+        #             break
+        #
+        #         f.write(data)
+        #         collected_ref_bytes += len(data)
+
         print("Capture complete.")
 
     def send_waveform(self, filename):
@@ -160,7 +191,7 @@ class DataReader:
         fft = FFT(signal=self.values if not scale_to_v else self.v_adc, sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
         fft.calculate()
         fft.plot_fft(x_lim=2500)
-        fft.get_harmonic_amplitudes(f0=50, num_harmonics=5, search_window_hz=2.0)
+        fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500)
         fft.print_harmonic_amplitudes()
 
     def analyse_signal(self, scale_to_v=False):
@@ -187,30 +218,41 @@ def rc_filter_numpy(data, fs=10_000, R=1000, C=22e-9):
 
 
 if __name__ == "__main__":
-    k = 20
+    k = 1
     uart = UART(serial_port=UartConfig.SERIAL_PORT, baudrate=UartConfig.BAUDRATE, out_file=UartConfig.OUT_FILE, batch_size=UartConfig.BATCH_SIZE)
     uart.connect()
-    uart.send_waveform(filename=Path('data/dac_sine_50_uT.bin'))
+    # uart.send_waveform(filename=Path('data/dac_500kv_under_line_nT.bin'))
+    # uart.send_waveform(filename=Path('data/dac_sine_7_uT.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine_100.bin'))
     # uart.send_waveform(filename=Path('data/dac_dc.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine.bin'))
-    # uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
+    uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
     # uart.send_waveform(filename=Path('data/dac_signal_odd_harmonics.bin'))
     # time.sleep(0.1)
-    uart.capture(record_seconds=5, waveform=Waveform.LAST_SENT, k=k)
-    # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
-    # uart.capture(record_seconds=5, waveform=Waveform.SINE, k=k)
-    # uart.capture(record_seconds=5, waveform=Waveform.SINE_ODD_HARMONICS)
+    uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=k)
+    # uart.capture(record_seconds=1, waveform=Waveform.SQUARE_WAVE)
+    # uart.capture(record_seconds=1, waveform=Waveform.SINE, k=k)
+    # uart.capture(record_seconds=1, waveform=Waveform.SINE_ODD_HARMONICS)
     uart.close()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
     data_reader = DataReader(filename=Path(UartConfig.OUT_FILE), adc=adc, freq=k*50)
     data_reader.read()
-    data_reader.plot_scatter(periods=2)
-    data_reader.plot_histogram()
-    data_reader.plot(periods=2)
-    data_reader.fft()
-    data_reader.analyse_signal(scale_to_v=False)
+    # data_reader.plot_scatter(periods=2)
+    # data_reader.plot_histogram()
+    # data_reader.plot(periods=2)
+    # data_reader.fft()
+    data_reader.analyse_signal()
+
+    data_reader.plot_scatter(periods=2, scale_to_v=True)
+    data_reader.plot_histogram(scale_to_v=True)
+    data_reader.plot(periods=2, scale_to_v=True)
+    data_reader.fft(scale_to_v=True)
+    data_reader.analyse_signal(scale_to_v=True)
+
+    data_reader = DataReader(filename=uart.out_ref_file, adc=adc, freq=k*50)
+    data_reader.read()
+    data_reader.analyse_signal()
 
     data_reader.plot_scatter(periods=2, scale_to_v=True)
     data_reader.plot_histogram(scale_to_v=True)

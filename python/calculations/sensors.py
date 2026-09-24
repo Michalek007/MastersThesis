@@ -41,11 +41,13 @@ class Sensor:
 
 
 class AD8429:
-    def __init__(self, vs_positive, vs_negative, v_reference, gain):
+    def __init__(self, vs_positive, vs_negative, v_reference, gain, Rg=None):
         self.Vs_p = vs_positive
         self.Vs_n = vs_negative
         self.V_ref = v_reference
         self.G = gain
+        if Rg:
+            self.G = (1 + 6000/Rg)
 
     @property
     def Vin_max(self):
@@ -160,6 +162,8 @@ if __name__ == "__main__":
     print("DRV425->AD8429: Vref [V]: ", ad8429_g2.V_ref, "; Gain: ", ad8429_g2.G)
     print("Vout_max [V]: ", ad8429_g2.Vout(drv425.Vout_max(Constants.B_max), drv425.Offset))
     print("Vout_min [V]: ", ad8429_g2.Vout(drv425.Vout_min(Constants.B_min), drv425.Offset))
+    print("B_max G=2[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g2.G / drv425.S * 1e6)
+    print("B_max G=30[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g30.G / drv425.S * 1e6)
     print()
 
     print("ALT021: ")
@@ -169,4 +173,9 @@ if __name__ == "__main__":
     print("ALT021->AD8429: Vref [V]: ", ad8429_g2.V_ref, "; Gain: ", ad8429_g2.G)
     print("Vout_max [V]: ", ad8429_g2.Vout(alt021.Vout_max(Constants.B_max), alt021.Offset))
     print("Vout_min [V]: ", ad8429_g2.Vout(alt021.Vout_min(Constants.B_min), alt021.Offset))
+    print("B_max G=2[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g2.G / alt021.S * 1e6)
+    print("B_max G=30[uT]: ", (Constants.Vcc - ad8429_g2.V_ref)/ad8429_g30.G / alt021.S * 1e6)
     print()
+
+    ad8429_g30 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
+    print(ad8429_g30.G)

@@ -54,6 +54,7 @@ class SignalGenerator:
             self.signal /= self.harmonics_dict[1]
         else:
             self.signal /= np.max(self.signal)
+        # self.signal /= np.max(self.signal)
 
     def save(self):
         self.signal.astype(np.float32).tofile(self.filename)
@@ -91,10 +92,14 @@ class SignalGenerator:
         self.fft.calculate()
         self.fft.plot_fft(x_scale=Config.FREQ, x_lim=Config.MAX_FREQ)
         if signal_type not in (Signal.SQUARE_WAVE, Signal.TRIANGULAR_WAVE):
-            self.fft.get_harmonic_amplitudes(f0=1, num_harmonics=max(self.harmonics_dict.keys()), search_window_hz=2/50)
+            # self.fft.get_harmonic_amplitudes(fundamental_freq=1, max_freq=max(self.harmonics_dict.keys()))
+            self.fft.get_harmonic_amplitudes_legacy(f0=1, num_harmonics=50, search_window_hz=2/50)
         else:
-            self.fft.get_harmonic_amplitudes(f0=1, num_harmonics=50, search_window_hz=2/50)
+            # self.fft.get_harmonic_amplitudes(fundamental_freq=1, max_freq=50)
+            self.fft.get_harmonic_amplitudes_legacy(f0=1, num_harmonics=50, search_window_hz=2/50)
         self.fft.print_harmonic_amplitudes(freq_scale=Config.FREQ, filename=Path(f"data/{self.name}_harmonics.csv"))
+        self.fft.calculate_thd(as_percentage=True)
+        print("THD [%]: ", self.fft.thd)
 
         self.analyzer = SignalAnalyzer(signal=self.signal)
         self.analyzer.print_parameters(filename=f'data/{self.name}.csv')
@@ -129,10 +134,17 @@ if __name__ == '__main__':
         31: 0.032,
         33: 5.0
     }
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_1, filename=Path("data/signal_odd_harmonics.bin")).generate()
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_2, filename=Path("data/signal_even_harmonics.bin")).generate()
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/square_wave.bin")).generate(signal_type=Signal.SQUARE_WAVE)
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/triangular_wave.bin")).generate(signal_type=Signal.TRIANGULAR_WAVE)
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_3, filename=Path("data/harmonics_3.bin")).generate()
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/sine.bin")).generate()
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/dc.bin")).generate(signal_type=Signal.DC)
+    harmonic_4 = {
+        1:  1.0,
+        3:  0.5,
+        5:  0.5
+    }
+    print(FFT.calculate_thd_from_dict(harmonic_4))
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_1, filename=Path("data/signal_odd_harmonics.bin")).generate()
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonics_2, filename=Path("data/signal_even_harmonics.bin")).generate()
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/square_wave.bin")).generate(signal_type=Signal.SQUARE_WAVE)
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict={}, filename=Path("data/triangular_wave.bin")).generate(signal_type=Signal.TRIANGULAR_WAVE)
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_3, filename=Path("data/harmonics_3.bin")).generate()
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/sine.bin")).generate()
+    # SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/dc.bin")).generate(signal_type=Signal.DC)
+    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_4, filename=Path("data/test.bin")).generate()

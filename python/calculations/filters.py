@@ -34,9 +34,13 @@ if __name__ == '__main__':
 
     f = FilterRC(R=1e3, C=3.3e-9)
     print(f.freq_3dB)
+    print()
 
     f = FilterRC(R=r_parallel(1e3, 9.09e3), C=22e-9)
     print(f.freq_3dB)
+    print()
 
-    f = FilterRC(R=r_parallel(1e3, 1e3), C=33e-9)
+    print("R1=10k, R2=10k")
+    f = FilterRC(R=r_parallel(10e3, 10e3), C=3.3e-9)
     print(f.freq_3dB)
+    print()

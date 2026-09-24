@@ -28,6 +28,10 @@ class CurrentSource:
     def V_S(self):
         return self.R_sense * self.R_divider
 
+    @property
+    def I_S(self):
+        return 1/self.V_S
+
 
 class HelmholtzCoil:
     def __init__(self, n, R, current_source: CurrentSource):
@@ -111,7 +115,7 @@ if __name__ == '__main__':
     print()
 
     current_source = CurrentSource(R=7.5, dac=dac, R_divider=1)
-    helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=0.5*1e-6/1e-3)
+    helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=0.5176*1e-6/1e-3)
     print("B (200mA)", helmholtz_coil.B(0.2) * 1e6, " uT")
     print("S_B ", helmholtz_coil.B_S * 1e6/1e3, " uT/mA")
     print("S_I ", helmholtz_coil.I_S * 1e3/1e6, " mA/uT")
