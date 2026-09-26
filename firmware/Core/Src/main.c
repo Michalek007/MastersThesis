@@ -155,6 +155,7 @@ int main(void) {
 	volatile uint32_t n_samples = 0;
 	volatile uint32_t n_samples_left = 0;
 	volatile uint8_t dac_disabled = 0;
+	volatile uint8_t adc_single_mode = 0;
 	while (1) {
 		/* USER CODE END WHILE */
 
@@ -167,10 +168,14 @@ int main(void) {
 //			HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
 			n_samples_left -= DATA_SIZE;
 			if (n_samples_left == 0) {
-				HAL_Delay(500);
-				HAL_StatusTypeDef err = HAL_UART_Transmit_DMA(&huart3, uartTxBufferRef, n_samples * 2); // n_samples * 2
-				if (err) {
-					HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+				if (!adc_single_mode) {
+					HAL_Delay(500);
+					HAL_StatusTypeDef err = HAL_UART_Transmit_DMA(&huart3, uartTxBufferRef, n_samples * 2); // n_samples * 2
+					if (err) {
+						HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+					}
+				} else {
+					adc_single_mode = 0;
 				}
 				uartTxIndexRef = 0;
 
@@ -217,7 +222,7 @@ int main(void) {
 			}
 		}
 		if (uartRxReceived) {
-			if (uartRxBuffer[0] == 'S' || uartRxBuffer[0] == 'T') {
+			if (uartRxBuffer[0] == 'S' || uartRxBuffer[0] == 'T' || uartRxBuffer[0] == 'C') {
 				n_samples = uartRxBuffer[1] * SAMPLES_PER_SECOND;
 				n_samples_left = n_samples;
 				uartTxIndexRef = 0;
@@ -273,6 +278,9 @@ int main(void) {
 				if (uartRxBuffer[0] == 'S') {
 					HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
 					HAL_TIM_Base_Start(&htim2);
+				} else if (uartRxBuffer[0] == 'C') {
+					adc_single_mode = 1;
+					dac_disabled = 1;
 				} else {
 					dac_disabled = 1;
 				}
@@ -629,7 +637,7 @@ static void MX_USART3_UART_Init(void) {
 
 	/* USER CODE END USART3_Init 1 */
 	huart3.Instance = USART3;
-	huart3.Init.BaudRate = 230400;
+	huart3.Init.BaudRate = 460800;
 	huart3.Init.WordLength = UART_WORDLENGTH_8B;
 	huart3.Init.StopBits = UART_STOPBITS_1;
 	huart3.Init.Parity = UART_PARITY_NONE;
