@@ -99,7 +99,7 @@ volatile uint8_t uartTxBusy = 0;
 volatile uint8_t uartTxRequest = 0;
 volatile uint8_t uartRxReceived = 0;
 
-const uint16_t *dac_lut = sine;
+const uint16_t *dac_lut = dc_0;
 uint16_t dac_lut_rx[1000] = { 0 };
 
 //UartPacket uartPacket = { .sync = 0xDEADBEEF, .data = { 0 } };
@@ -228,11 +228,15 @@ int main(void) {
 				uartTxIndexRef = 0;
 
 				if (uartRxBuffer[2] == 0) {
-					dac_lut = sine;
+					dac_lut = sine_50_uT_RMS;
 				} else if (uartRxBuffer[2] == 1) {
 					dac_lut = sine_odd_harmonics;
 				} else if (uartRxBuffer[2] == 2) {
 					dac_lut = square_wave;
+				} else if (uartRxBuffer[2] == 3) {
+					dac_lut = dc_0;
+				} else if (uartRxBuffer[2] == 4) {
+					dac_lut = sine_20_uT_RMS;
 				} else {
 					dac_lut = dac_lut_rx;
 				}
@@ -275,13 +279,19 @@ int main(void) {
 				htim2.Instance->EGR = TIM_EGR_UG;
 				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
 
-				if (uartRxBuffer[0] == 'S') {
+				if (uartRxBuffer[0] == 'S' || uartRxBuffer[0] == 'C') {
 					HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
 					HAL_TIM_Base_Start(&htim2);
-				} else if (uartRxBuffer[0] == 'C') {
-					adc_single_mode = 1;
-					dac_disabled = 1;
-				} else {
+
+					if (uartRxBuffer[0] == 'C') {
+						adc_single_mode = 1;
+					}
+				}
+//				} else if (uartRxBuffer[0] == 'C') {
+//					adc_single_mode = 1;
+//					dac_disabled = 1;
+//				}
+				else {
 					dac_disabled = 1;
 				}
 
