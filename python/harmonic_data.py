@@ -279,3 +279,71 @@ harmonic_400kV_2t_1kA_21m_uT = {
 #     5: 4.2,
 #     7: 3.1
 # }
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+
+    def plot_harmonic_percentages(B1_value, harmonics_dict, THD):
+        """
+        Plots the harmonic spectrum as a percentage of the given B1_value with a logarithmic Y-axis.
+
+        Args:
+            B1_value (float): The value of the fundamental harmonic.
+            harmonics_dict (dict): Dictionary of harmonic orders and magnitudes.
+            THD (float/str): Total Harmonic Distortion to display on the graph.
+        """
+        # Sort the dictionary keys to ensure the x-axis is in numerical order
+        orders = sorted(harmonics_dict.keys())
+
+        # Calculate the percentage for each harmonic relative to B1_value
+        percentages = [(harmonics_dict[order] / B1_value) * 100 for order in orders]
+
+        # Create the plot
+        plt.figure(figsize=(12, 6))
+        bars = plt.bar(orders, percentages, color='skyblue', edgecolor='black', zorder=3)
+
+        # Set y-axis to logarithmic scale
+        plt.yscale('log')
+
+        # Formatting the graph
+        plt.xlabel('Harmonic Order', fontsize=12)
+        plt.ylabel('Percentage of Fundamental (%) [Log Scale]', fontsize=12)
+
+        # Display THD in the title
+        plt.title(f'Harmonic Spectrum as Percentage of Fundamental\nTHD: {THD}%',
+                  fontsize=14, fontweight='bold')
+
+        plt.xticks(orders)
+        # Use 'both' to show minor grid lines, which helps read log scales
+        plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0, which='both')
+
+        # Add percentage text labels on top of each bar
+        for bar, p in zip(bars, percentages):
+            # Multiply height by 1.1 to position text correctly above the bar on a log scale
+            plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() * 1.1,
+                     f'{p:.2f}%',
+                     ha='center', va='bottom', fontsize=9, rotation=45)
+
+        plt.tight_layout()
+        plt.show()
+
+
+    # --- Example Usage ---
+    harmonic_500kv_under_line_nT = {
+        1: 7531.2, 2: 7.34, 3: 57.78, 4: 17.74, 5: 124.44, 6: 2.46, 7: 51.98,
+        8: 4.58, 9: 16.56, 10: 3.42, 11: 44.86, 12: 1.72, 13: 8.99, 14: 1.04,
+        15: 4.44, 16: 3.48, 17: 13.72, 18: 2.24, 19: 8.18, 20: 1.16
+    }
+
+    # Example THD calculation (or you can pass the result from your FFT module directly)
+    import math
+
+    thd_val = math.sqrt(sum((v) ** 2 for k, v in harmonic_500kv_under_line_nT.items() if k != 1)) / \
+              harmonic_500kv_under_line_nT[1] * 100
+
+    b1 = harmonic_500kv_under_line_nT[1]
+
+    # Pass the calculated/known THD into the function
+    plot_harmonic_percentages(b1, harmonic_500kv_under_line_nT, round(thd_val, 2))

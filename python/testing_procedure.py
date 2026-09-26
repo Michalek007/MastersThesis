@@ -12,31 +12,31 @@ from pathlib import Path
 
 
 class Config:
-    GENERATE_DATA = 0
-    CAPTURE_DATA = 0
-    PROCESS_DATA = 1
+    GENERATE_DATA = 1
+    CAPTURE_DATA = 1
+    PROCESS_DATA = 0
 
     SENSOR_VCC = 5
     AD8429_VP = 7.8
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
 
-    SUT = "ALT021"
+    # SUT = "ALT021"
     # SUT = "DRV425"
     # SUT = "DRV5055"
-    # SUT = "HMC1001"
+    SUT = "HMC1001"
 
     # ALL_SIGNALS = 1
-    LOW_SIGNALS = 1
+    LOW_SIGNALS = 0
 
-    GAIN = "2"
-    # GAIN = "30"
+    # GAIN = "2"
+    GAIN = "30"
 
     R_DIVIDER = "1"
     # R_DIVIDER = "2"
 
-    # TEST_PROCEDURE = "TP0"
-    TEST_PROCEDURE = "TP1"
+    TEST_PROCEDURE = "TP0"
+    # TEST_PROCEDURE = "TP1"
     # TEST_PROCEDURE = "TP2"
     # TEST_PROCEDURE = "TP3"
 
@@ -46,23 +46,40 @@ if __name__ == '__main__':
     current_source = CurrentSource(R=7.5, dac=dac)
     if Config.R_DIVIDER == "2":
         current_source.R_divider = 2
-    helmholtz_coil = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
+    # helmholtz_coil_ideal = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
     # helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=0.5176*1e-6/1e-3)
+    # 0.7429488881428628
+    # helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=helmholtz_coil_ideal.B_S*0.75)
+    helmholtz_coil = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
+    # import sys
+    # sys.exit()
 
     mf_signal_generator = MagneticFieldSignalGenerator(
         B_1=10e-6, DAC_V_offset=0.1, harmonics_dict={1: 1.0},
         n_samples=1000, signal_type=Signal.SINE, filename=Path(f"data/sine_10_uT_{Config.R_DIVIDER}.bin"),
         helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac
     )
+    names_tp0 = []
+    if Config.TEST_PROCEDURE == "TP0":
+        dc_values = [0, 5, 20]
+        for dc_value in dc_values:
+            name = f"DC_{dc_value}_uT_RD{Config.R_DIVIDER}_BS{int(helmholtz_coil.B_S*1e6)}"
+            names_tp0.append(name)
+            if Config.GENERATE_DATA:
+                mf_signal_generator.signal_type = Signal.DC
+                mf_signal_generator.B_1 = dc_value
+                mf_signal_generator.filename = Path(f"in/{name}.bin")
+                mf_signal_generator.generate()
+
     if Config.LOW_SIGNALS:
-        # b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
-        b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6, 15e-6, 20e-6, 25e-6, 30e-6, 35e-6, 40e-6, 45e-6]
+        b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
+        # b1_values_rms = [0.5e-6, 1e-6, 3e-6, 5e-6, 7e-6, 10e-6, 15e-6, 20e-6, 25e-6, 30e-6, 35e-6, 40e-6, 45e-6]
     else:
         b1_values_rms = [15e-6, 20e-6, 25e-6, 30e-6, 35e-6, 40e-6, 45e-6, 50e-6, 55e-6, 60e-6]
 
     names_tp1 = []
     for b1_rms in b1_values_rms:
-        name = f"sine_{int(b1_rms*1e6)}_uT_RD{Config.R_DIVIDER}"
+        name = f"sine_{int(b1_rms*1e6)}_uT_RD{Config.R_DIVIDER}_BS{int(helmholtz_coil.B_S*1e6)}"
         names_tp1.append(name)
         if Config.GENERATE_DATA and Config.TEST_PROCEDURE == "TP1":
             mf_signal_generator.B_1 = b1_rms
@@ -75,17 +92,20 @@ if __name__ == '__main__':
         names_tp2 = [f"sine_15_uT_RD{Config.R_DIVIDER}", f"sine_20_uT_RD{Config.R_DIVIDER}", f"sine_50_uT_RD{Config.R_DIVIDER}"]
     k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
 
-    if Config.LOW_SIGNALS:
-        tp3_b1_values_rms = {"7_5uT": harmonic_500kv_under_line_nT[1] * 1e-9, "1_9uT": harmonic_35kV_300A[1] * 1e-6,
-                             "1_8uT": harmonic_220kv_nT[1] * 1e-9}
-    else:
-        tp3_b1_values_rms = {"22uT": harmonics_110kV_700A_uT[1] * 1e-6, "19uT": harmonic_400kV_1kA_10m_uT[1] * 1e-6,
-                             "13uT": harmonic_400kV_2t_1kA_10m_uT[1] * 1e-6}
-    harmonics_data_dicts = {"500kV": harmonic_500kv_under_line_nT, "220kV": harmonic_220kv_nT, "400kV": harmonic_400kV_1_8kA_IV, "THD29": harmonic_typical_values}
+    tp3_b1_values_rms = {"7_5uT": harmonic_500kv_under_line_nT[1] * 1e-9,  "1_8uT": harmonic_220kv_nT[1] * 1e-9,
+                         "22uT": harmonics_110kV_700A_uT[1] * 1e-6}
+    # if Config.LOW_SIGNALS:
+    #     tp3_b1_values_rms = {"7_5uT": harmonic_500kv_under_line_nT[1] * 1e-9, "1_9uT": harmonic_35kV_300A[1] * 1e-6,
+    #                          "1_8uT": harmonic_220kv_nT[1] * 1e-9}
+    # else:
+    #     tp3_b1_values_rms = {"22uT": harmonics_110kV_700A_uT[1] * 1e-6, "19uT": harmonic_400kV_1kA_10m_uT[1] * 1e-6,
+    #                          "13uT": harmonic_400kV_2t_1kA_10m_uT[1] * 1e-6}
+    # harmonics_data_dicts = {"500kV": harmonic_500kv_under_line_nT, "220kV": harmonic_220kv_nT, "400kV": harmonic_400kV_1_8kA_IV, "THD29": harmonic_typical_values}
+    harmonics_data_dicts = {"500kV": harmonic_500kv_under_line_nT, "400kV": harmonic_400kV_1_8kA_IV, "THD29": harmonic_typical_values}
     names_tp3 = []
     for value_name, value in tp3_b1_values_rms.items():
         for harmonic_name, harmonics_data in harmonics_data_dicts.items():
-            name = f"harmonic_{value_name}_{harmonic_name}_RD{Config.R_DIVIDER}"
+            name = f"harmonic_{value_name}_{harmonic_name}_RD{Config.R_DIVIDER}_BS{int(helmholtz_coil.B_S*1e6)}"
             names_tp3.append(name)
             mf_signal_generator.filename = Path(f"in/{name}.bin")
 
@@ -93,26 +113,6 @@ if __name__ == '__main__':
                 mf_signal_generator.B_1 = value
                 mf_signal_generator.harmonics_dict = harmonics_data
                 mf_signal_generator.generate()
-
-    # helmholtz_coil.current_source.R_divider = 2
-    # b1_values_rms_small = [1e-6, 3e-6, 5e-6, 7e-6, 10e-6]
-    # for b1_rms in b1_values_rms_small:
-    #     mf_signal_generator.B_1 = b1_rms
-    #     mf_signal_generator.filename = Path(f"data/sine_{int(b1_rms*1e6)}_uT.bin")
-    #     mf_signal_generator.generate()
-
-    # test_signals_bandwidth = {
-    #     1250: 1024,
-    #     2500: 1024
-    # }
-    # mf_signal_generator.B_1 = 20e-6
-    # mf_signal_generator.filename = Path(f"data/sine_d1_1_uT.bin")
-    # mf_signal_generator.generate()
-    #
-    # current_source.R_divider = 2
-    # mf_signal_generator.B_1 = 20e-6
-    # mf_signal_generator.filename = Path(f"data/sine_d2_1_uT.bin")
-    # mf_signal_generator.generate()
 
     adc = ADC(vcc=3.3, resolution_bits=16)
     ad8429_g2 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
@@ -133,8 +133,6 @@ if __name__ == '__main__':
     elif Config.SUT == "DRV425":
         sensor = drv425
         ad8429 = ad8429_g2
-        # if Config.LOW_SIGNALS:
-        #     ad8429 = ad8429_g30
     elif Config.SUT == "HMC1001":
         sensor = hmc1001
         ad8429 = ad8429_g30
@@ -147,6 +145,16 @@ if __name__ == '__main__':
 
     if Config.CAPTURE_DATA:
         uart.connect()
+        if Config.TEST_PROCEDURE == "TP0":
+            for name in names_tp0:
+                dac_file = Path(f"in/dac_{name}.bin")
+                out_file = Path(f"out/out_{Config.SUT}_{name}.bin")
+                out_ref_file = Path(f"out/out_{Config.SUT}_{name}_ref.bin")
+                uart.out_file = out_file
+                uart.out_ref_file = out_ref_file
+                uart.send_waveform(dac_file)
+                uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT)
+                time.sleep(2)
         if Config.TEST_PROCEDURE == "TP1":
             for name in names_tp1:
                 dac_file = Path(f"in/dac_{name}.bin")

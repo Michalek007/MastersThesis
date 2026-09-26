@@ -14,6 +14,7 @@ class FilterRC:
 
 
 if __name__ == '__main__':
+    print("Filter RC 1k 22n: ")
     f = FilterRC(R=1e3, C=22e-9)
     print(f.freq_3dB)
 

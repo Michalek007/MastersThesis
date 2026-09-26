@@ -94,6 +94,7 @@ if __name__ == '__main__':
     print("B (200mA)", helmholtz_coil.B(0.2) * 1e6, " uT")
     print("S_B ", helmholtz_coil.B_S * 1e6/1e3, " uT/mA")
     print("S_I ", helmholtz_coil.I_S * 1e3/1e6, " mA/uT")
+    print("Imax ", current_source.I_max * 1e3, " mA")
     print("Bmax ", helmholtz_coil.B_max * 1e6, " uT")
     print("Ires ", current_source.I_res * 1e6, " uA")
     print("Bres ", helmholtz_coil.B_res * 1e6, " uT")

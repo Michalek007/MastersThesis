@@ -22,54 +22,59 @@ class SensorBodeAnalyzer:
         self.processed_datasets = []
 
     def _extract_fundamental(self, csv_path):
-        """
-        Wczytuje plik CSV i zwraca parametry dla częstotliwości podstawowej.
-        """
         df = pd.read_csv(csv_path)
         idx_max = df['RMS'].idxmax()
         row = df.loc[idx_max]
         return row['frequency_hz'], row['RMS'], row['phase']
 
     def _process_amplitude_group(self, label, file_pairs):
-        """
-        Przetwarza listę par plików dla jednej konkretnej amplitudy.
-        """
         results = []
 
-        for vout_csv, bref_csv in file_pairs:
-            f_v, v_rms, v_phase = self._extract_fundamental(vout_csv)
-            f_b, b_rms, b_phase = self._extract_fundamental(bref_csv)
+        ref_50hz = 1
+        meas_50hz = 1
 
-            if abs(f_v - f_b) > 1.0:
+        for meas_csv, ref_csv in file_pairs:
+            f_meas, meas_rms, meas_phase = self._extract_fundamental(meas_csv)
+            f_ref, ref_rms, ref_phase = self._extract_fundamental(ref_csv)
+
+            if abs(f_meas - f_ref) > 1.0:
                 print(
-                    f"Ostrzeżenie ({label}): Rozbieżność częstotliwości między {vout_csv} ({f_v}Hz) a {bref_csv} ({f_b}Hz)")
-
-            f_x = f_v
-            b_rms_T = b_rms * 1e-6
-
-            # Zabezpieczenie przed dzieleniem przez 0
-            S = v_rms / b_rms_T if b_rms_T != 0 else 0
-
-            delta_phi = v_phase - b_phase
+                    f"Ostrzeżenie ({label}): Rozbieżność częstotliwości między {meas_csv} ({f_meas}Hz) a {ref_csv} ({f_ref}Hz)")
+            # S = v_rms / b_rms_T if b_rms_T != 0 else 0
+            delta_phi = meas_phase - ref_phase
             delta_phi = (delta_phi + 180) % 360 - 180
 
+            if ref_rms == 0.0:
+                ref_rms = 1e-12
+
             results.append({
-                'frequency': f_x,
-                'S_VT': S,
-                'RMS': v_rms,
+                'frequency': f_ref,
+                'ref_rms': ref_rms,
+                'meas_rms': meas_rms,
                 'delta_phi': delta_phi
             })
+            if f_ref == 50:
+                ref_50hz = ref_rms
+                meas_50hz = meas_rms
 
-        results = sorted(results, key=lambda x: x['frequency'])
+        ratio_50hz = meas_50hz/ref_50hz
+        for r in results:
+            r['G_dB'] = 20 * np.log10(r['meas_rms']/r['ref_rms']/ratio_50hz)
 
-        if results:
-            ref_50hz = min(results, key=lambda x: abs(x['frequency'] - 50.0))
-            RMS_50 = ref_50hz['RMS']
+        # results = sorted(results, key=lambda x: x['frequency'])
 
-            for r in results:
-                # Zabezpieczenie przed logarytmem z zera
-                ratio = r['RMS'] / RMS_50 if RMS_50 != 0 else 1e-12
-                r['G_dB'] = 20 * np.log10(ratio)
+        # if results:
+        #     ref_50hz = min(results, key=lambda x: abs(x['frequency'] - 50.0))
+        #     RMS_50 = ref_50hz['ref_rms']
+
+
+        # if results:
+        #     ref_50hz = min(results, key=lambda x: abs(x['frequency'] - 50.0))
+        #     RMS_50 = ref_50hz['ref_rms']
+        #
+        #     for r in results:
+        #         ratio = r['RMS'] / RMS_50 if RMS_50 != 0 else 1e-12
+        #         r['G_dB'] = 20 * np.log10(ratio)
 
         return results
 
@@ -83,7 +88,7 @@ class SensorBodeAnalyzer:
             data = self._process_amplitude_group(label, file_pairs)
             self.processed_datasets.append((label, data))
 
-    def plot(self):
+    def plot(self, filename=None):
         """
         Generuje i wyświetla wykresy charakterystyk dla wszystkich przetworzonych amplitud.
         """
@@ -91,8 +96,8 @@ class SensorBodeAnalyzer:
             print("Brak danych do wyświetlenia. Uruchom najpierw metodę analyze().")
             return
 
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
-        fig.suptitle('Charakterystyki częstotliwościowe czujnika dla różnych amplitud', fontsize=14)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), sharex=True)
+        fig.suptitle('Charakterystyki częstotliwościowe czujnika dla różnych wartości RMS', fontsize=14)
 
         # Dynamiczne generowanie kolorów i znaczników dla dowolnej liczby amplitud
         colors = itertools.cycle(plt.cm.tab10.colors)
@@ -104,32 +109,30 @@ class SensorBodeAnalyzer:
             fmt = f'{marker}-'
 
             freqs = [d['frequency'] for d in data]
-            S_vals = [d['S_VT'] for d in data]
             G_vals = [d['G_dB'] for d in data]
             phi_vals = [d['delta_phi'] for d in data]
 
-            ax1.plot(freqs, S_vals, fmt, color=color, label=str(label), markersize=5)
-            ax2.plot(freqs, G_vals, fmt, color=color, label=str(label), markersize=5)
-            ax3.plot(freqs, phi_vals, fmt, color=color, label=str(label), markersize=5)
+            ax1.plot(freqs, G_vals, fmt, color=color, label=str(label), markersize=5)
+            ax2.plot(freqs, phi_vals, fmt, color=color, label=str(label), markersize=5)
 
-        for ax in (ax1, ax2, ax3):
+        for ax in (ax1, ax2):
             ax.set_xscale('log')
             ax.grid(True, which="both", ls="--", alpha=0.6)
             ax.legend()
 
-        ax1.set_ylabel('Czułość bezwzględna S [V/T]')
-        ax1.set_title('Bezwzględna czułość napięciowa S(f)')
+        ax1.set_ylabel('Znormalizowane wzmocnienie G [dB]')
+        ax1.set_title('Tłumienie G(f) względem 50 Hz')
+        ax1.axhline(0, color='black', linewidth=1)
 
-        ax2.set_ylabel('Znormalizowane wzmocnienie G [dB]')
-        ax2.set_title('Tłumienie G(f) względem 50 Hz')
-        ax2.axhline(0, color='black', linewidth=1)
-
-        ax3.set_ylabel('Przesunięcie fazowe Δφ [°]')
-        ax3.set_title('Charakterystyka fazowa Δφ(f)')
-        ax3.set_xlabel('Częstotliwość [Hz]')
+        ax2.set_ylabel('Przesunięcie fazowe Δφ [°]')
+        ax2.set_title('Charakterystyka fazowa Δφ(f)')
+        ax2.set_xlabel('Częstotliwość [Hz]')
 
         plt.tight_layout()
-        plt.show()
+        if filename:
+            plt.savefig(filename, dpi=300)
+        else:
+            plt.show()
 
 
 if __name__ == "__main__":

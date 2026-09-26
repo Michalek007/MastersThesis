@@ -98,8 +98,9 @@ class SignalGenerator:
             # self.fft.get_harmonic_amplitudes(fundamental_freq=1, max_freq=50)
             self.fft.get_harmonic_amplitudes_legacy(f0=1, num_harmonics=50, search_window_hz=2/50)
         self.fft.print_harmonic_amplitudes(freq_scale=Config.FREQ, filename=Path(f"data/{self.name}_harmonics.csv"))
-        self.fft.calculate_thd(as_percentage=True)
-        print("THD [%]: ", self.fft.thd)
+        if signal_type != Signal.DC:
+            self.fft.calculate_thd(as_percentage=True)
+            print("THD [%]: ", self.fft.thd)
 
         self.analyzer = SignalAnalyzer(signal=self.signal)
         self.analyzer.print_parameters(filename=f'data/{self.name}.csv')

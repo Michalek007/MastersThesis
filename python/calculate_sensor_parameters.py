@@ -141,7 +141,7 @@ class CalculateSensorParams:
             "Max_INL_Error_%": self.inl_max_pct
         }
 
-    def plot_graphs(self, x_label=None, y_label=None):
+    def plot_graphs(self, x_label=None, y_label=None, filename=None):
         """Plots the AC Transfer Curve and Dynamic Linearity (THD)."""
         if self.sensitivity is None:
             self.calculate_params()
@@ -151,12 +151,12 @@ class CalculateSensorParams:
         # --- Plot 1: Amplitude Linearity (Krzywa transferu AC) ---
         ideal_fit = self.sensitivity * self.ref_fundamental + self.intercept
 
-        ax1.scatter(self.ref_fundamental, self.meas_fundamental, color='red', label='Pole magnetyczne zmierzone 50 Hz RMS', zorder=5)
+        ax1.scatter(self.ref_fundamental, self.meas_fundamental, color='red', label='Pole magnetyczne zmierzone 50 Hz RMS [μT]', zorder=5)
         ax1.plot(self.ref_fundamental, ideal_fit, 'b--', label='Dopasowanie liniowe')
 
-        ax1.set_title('Liniowość amplitudy dla częstotliwości 50Hz')
-        ax1.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [uT]')
-        ax1.set_ylabel('Pole magnetyczne zmierzone [uT]')
+        ax1.set_title('Liniowość dla częstotliwości 50Hz')
+        ax1.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [μT]')
+        ax1.set_ylabel('Pole magnetyczne zmierzone RMS [μT]')
 
         metrics_text = (f"R² (Determinacja): {self.r_squared:.6f}\n"
                         f"INL: {self.inl_max_pct:.3f}% FS\n"
@@ -171,8 +171,8 @@ class CalculateSensorParams:
         ax2.plot(self.ref_fundamental, self.meas_thd, marker='o', color='green', linestyle='-', linewidth=2)
 
         ax2.set_title('Liniowiość dynamiczna (THD a wartość skuteczna sygnału)')
-        ax2.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS')
-        ax2.set_ylabel('THD zmierzonego pola magnetycznego [%])')
+        ax2.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [μT]')
+        ax2.set_ylabel('THD zmierzonego pola magnetycznego [%]')
 
         ax2.set_ylim(bottom=0)
         ax2.grid(True, linestyle=':', alpha=0.7)
@@ -184,7 +184,10 @@ class CalculateSensorParams:
             ax1.set_ylabel(y_label)
 
         plt.tight_layout()
-        plt.show()
+        if filename:
+            plt.savefig(filename, dpi=500)
+        else:
+            plt.show()
 
 
 if __name__ == '__main__':

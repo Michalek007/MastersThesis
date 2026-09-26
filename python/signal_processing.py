@@ -4,6 +4,7 @@ from measurements.uart import DataReader, UART, Waveform, UartConfig
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
+from collections import defaultdict
 
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -35,6 +36,7 @@ class SignalProcessing:
         self.fft = FFT(signal=self.dac_values, sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
         self.fft.calculate()
         self.fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
+        self.fft.harmonics_amp = self.calculate_IEEE_harmonics()
         self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
         self.name = out_name
         self.out_dir = out_dir if out_dir else "results"
@@ -42,6 +44,25 @@ class SignalProcessing:
         self.helmholtz_coil = helmholtz_coil
         self.freq = freq
         self.samples_per_period = UartConfig.SAMPLING_RATE / self.freq
+
+    def calculate_IEEE_harmonics(self):
+        iterations = self.n_samples // 2000
+        fft_harmonics = []
+        for i in range(iterations):
+            fft = FFT(signal=self.dac_values[i*2000:(i+1)*2000], sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
+            fft.calculate()
+            fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
+            fft_harmonics.append(fft.harmonics_amp)
+
+        result_harmonics = []
+        for harmonic_group in zip(*fft_harmonics):
+            result_harmonics.append({
+                'harmonic': harmonic_group[0]['harmonic'],
+                'frequency': harmonic_group[0]['frequency'],
+                'rms': np.mean([h['rms'] for h in harmonic_group]),
+                'phase': np.mean([h['phase'] for h in harmonic_group])
+            })
+        return result_harmonics
 
     @property
     def helmholtz_coil_B_uT_factor(self):
@@ -184,8 +205,8 @@ if __name__ == '__main__':
     drv5055 = DRV5055(vcc=Config.SENSOR_VCC)
     drv425 = DRV425(vcc=Config.SENSOR_VCC, R_shunt=100)
 
-    sp_alt021 = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g30, out_name="TEST_ALT021")
-    sp_alt021.plot_magnetic_field()
+    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=hmc1001, ad8429=ad8429_g30, out_name="TEST_HMC1001")
+    sp.plot_magnetic_field()
     # sp_alt021.plot_v_sensor()
 
     dac = DAC(vcc=3.3, resolution_bits=12, buffer_enabled=True)
@@ -196,7 +217,7 @@ if __name__ == '__main__':
     data_reader = DataReader(filename=uart.out_ref_file, adc=adc)
     data_reader.read()
     data_reader.plot(periods=2, scale_to_v=True)
-    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=alt021, ad8429=ad8429_g30, out_name="TEST_H_COIL", helmholtz_coil=helmholtz_coil)
+    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=hmc1001, ad8429=ad8429_g30, out_name="TEST_H_COIL", helmholtz_coil=helmholtz_coil)
     sp.plot_current()
     sp.plot_magnetic_field()
 
