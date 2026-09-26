@@ -32,8 +32,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define RAW_DATA_SIZE 1600
-#define OVR 4
-#define P 2
+#define OVR 32
+#define P 5
 #define DATA_SIZE (RAW_DATA_SIZE / OVR)
 #define UART_TX_BUF_SIZE (DATA_SIZE * 2)  // batch size
 #define UART_RX_BUF_SIZE 4
@@ -154,6 +154,7 @@ int main(void) {
 	/* USER CODE BEGIN WHILE */
 	volatile uint32_t n_samples = 0;
 	volatile uint32_t n_samples_left = 0;
+	volatile uint8_t dac_disabled = 0;
 	while (1) {
 		/* USER CODE END WHILE */
 
@@ -163,7 +164,7 @@ int main(void) {
 			uartTxBusy = 1;
 			HAL_UART_Transmit_DMA(&huart3, uartTxBuffer, UART_TX_BUF_SIZE);
 //			HAL_UART_Transmit_DMA(&huart3, (uint8_t*) &uartPacket, UART_TX_BUF_SIZE + 4);
-			HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+//			HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
 			n_samples_left -= DATA_SIZE;
 			if (n_samples_left == 0) {
 				HAL_Delay(500);
@@ -178,8 +179,12 @@ int main(void) {
 				HAL_ADCEx_MultiModeStop_DMA(&hadc1);
 				HAL_ADC_Stop(&hadc2);
 
-				HAL_TIM_Base_Stop(&htim2);
-				HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+				if (!dac_disabled) {
+					HAL_TIM_Base_Stop(&htim2);
+					HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+				} else {
+					dac_disabled = 0;
+				}
 
 //				HAL_Delay(500);
 //				uint16_t batch_samples = 1000;
@@ -212,7 +217,7 @@ int main(void) {
 			}
 		}
 		if (uartRxReceived) {
-			if (uartRxBuffer[0] == 'S') {
+			if (uartRxBuffer[0] == 'S' || uartRxBuffer[0] == 'T') {
 				n_samples = uartRxBuffer[1] * SAMPLES_PER_SECOND;
 				n_samples_left = n_samples;
 				uartTxIndexRef = 0;
@@ -265,16 +270,22 @@ int main(void) {
 				htim2.Instance->EGR = TIM_EGR_UG;
 				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
 
-				HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
-				HAL_TIM_Base_Start(&htim2);
+				if (uartRxBuffer[0] == 'S') {
+					HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
+					HAL_TIM_Base_Start(&htim2);
+				} else {
+					dac_disabled = 1;
+				}
 
-				HAL_Delay(5);
+				HAL_Delay(10);
 
 				// HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer, RAW_DATA_SIZE);
 				HAL_ADC_Start(&hadc2);
 				HAL_ADCEx_MultiModeStart_DMA(&hadc1, adcCombinedBuffer, RAW_DATA_SIZE * 2);
 				HAL_TIM_Base_Start(&htim3);
 				uartRxReceived = 0;
+
+				HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
 			} else if (uartRxBuffer[0] == 'R') {
 				uartRxReceived = 0;
 				HAL_StatusTypeDef err = HAL_UART_Receive(&huart3, (uint8_t*) dac_lut_rx, 2000, 1000);
@@ -582,7 +593,7 @@ static void MX_TIM3_Init(void) {
 	htim3.Instance = TIM3;
 	htim3.Init.Prescaler = 0;
 	htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim3.Init.Period = 1599;
+	htim3.Init.Period = 199;
 	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
