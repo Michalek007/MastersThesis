@@ -14,19 +14,23 @@ import time
 
 class Waveform(Enum):
     SINE = 0
-    SINE_ODD_HARMONICS = 1
-    SQUARE_WAVE = 2
-    LAST_SENT = 3
+    # SINE_ODD_HARMONICS = 1
+    # SQUARE_WAVE = 2
+    # DC_0 = 3
+    SINE_20_uT_RMS = 4
+    LAST_SENT = 5
 
 
 class UartConfig:
     SERIAL_PORT = "COM3"
-    BAUDRATE = 230400
+    # BAUDRATE = 230400
+    BAUDRATE = 460800
     SAMPLING_RATE = 10e3
     FREQ = 50
     SAMPLES_PER_PERIOD = 10e3/FREQ
     TIME_STEP = 1/SAMPLING_RATE
-    BATCH_SIZE = 400  # data sent in one burst [bytes]
+    # BATCH_SIZE = 400  # data sent in one burst [bytes]
+    BATCH_SIZE = 100
     RECORD_SECONDS = 5
     OUT_FILE = Path(f"data/uart_capture_{datetime.now().strftime('%Y%m%d_%H%M')}.bin")
     # OUT_FILE = Path(f"data/uart_capture_test.bin")
@@ -61,14 +65,16 @@ class UART:
     # def create_start_packet(self, command_byte="S", record_seconds=1, waveform_value=0, k=1):
     #     return bytes([ord(command_byte), record_seconds, waveform_value, k])
 
-    def capture(self, record_seconds, waveform: Waveform, k=1):
+    def capture(self, record_seconds, waveform: Waveform, k=1, dac_disabled=0):
         print(f"Recording for {record_seconds} seconds...")
+
+        command_byte = "T" if dac_disabled else "S"
 
         buffer = bytearray()
         collected_bytes = 0
         target_bytes = UartConfig.SAMPLING_RATE * record_seconds * 2
         with open(self.out_file, "wb") as f:
-            start_packet = bytes([ord("S"), record_seconds, waveform.value, k])
+            start_packet = bytes([ord(command_byte), record_seconds, waveform.value, k])
             self.serial.write(start_packet)
             data = 1
             while data:
@@ -113,7 +119,8 @@ class UART:
         self.serial.write(start_packet)
         # time.sleep(0.1)
 
-        batch_size = 2000
+        # batch_size = 2000
+        batch_size = 4000
         with open(filename, "rb") as f:
             self.serial.write(f.read(batch_size))
             self.serial.flush()
@@ -226,12 +233,13 @@ if __name__ == "__main__":
     # uart.send_waveform(filename=Path('data/dac_sine_100.bin'))
     # uart.send_waveform(filename=Path('data/dac_dc.bin'))
     # uart.send_waveform(filename=Path('data/dac_sine.bin'))
-    uart.send_waveform(filename=Path('data/dac_small_sine.bin'))
+    # uart.send_waveform(filename=Path('data/dac_calibration_test_sine_10_uT.bin'))
     # uart.send_waveform(filename=Path('data/dac_signal_odd_harmonics.bin'))
     # time.sleep(0.1)
-    uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=k)
+    # uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=k)
     # uart.capture(record_seconds=1, waveform=Waveform.SQUARE_WAVE)
     # uart.capture(record_seconds=1, waveform=Waveform.SINE, k=k)
+    uart.capture(record_seconds=1, waveform=Waveform.SINE_20_uT_RMS, k=k)
     # uart.capture(record_seconds=1, waveform=Waveform.SINE_ODD_HARMONICS)
     uart.close()
 

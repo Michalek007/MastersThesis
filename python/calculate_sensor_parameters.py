@@ -18,6 +18,10 @@ class CalculateSensorParams:
         :param harmonics_files: List of FFT harmonics CSV files for the sensor.
         :param ref_harmonics_files: List of FFT harmonics CSV files for the reference input.
         """
+        print(len(measured_files))
+        print(len(reference_files))
+        print(len(harmonics_files))
+        print(len(ref_harmonics_files))
         if not (len(measured_files) == len(reference_files) == len(harmonics_files) == len(ref_harmonics_files)):
             raise ValueError("All input file lists must have the exact same number of files.")
 
@@ -154,8 +158,8 @@ class CalculateSensorParams:
         ax1.scatter(self.ref_fundamental, self.meas_fundamental, color='red', label='Pole magnetyczne zmierzone 50 Hz RMS [μT]', zorder=5)
         ax1.plot(self.ref_fundamental, ideal_fit, 'b--', label='Dopasowanie liniowe')
 
-        ax1.set_title('Liniowość dla częstotliwości 50Hz')
-        ax1.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [μT]')
+        ax1.set_title('Liniowość dla częstotliwości 50 Hz')
+        ax1.set_xlabel('Pole magnetyczne referencyjne 50 Hz RMS [μT]')
         ax1.set_ylabel('Pole magnetyczne zmierzone RMS [μT]')
 
         metrics_text = (f"R² (Determinacja): {self.r_squared:.6f}\n"
@@ -171,7 +175,7 @@ class CalculateSensorParams:
         ax2.plot(self.ref_fundamental, self.meas_thd, marker='o', color='green', linestyle='-', linewidth=2)
 
         ax2.set_title('Liniowiość dynamiczna (THD a wartość skuteczna sygnału)')
-        ax2.set_xlabel('Pole magnetyczne referencyjne 50Hz RMS [μT]')
+        ax2.set_xlabel('Pole magnetyczne referencyjne 50 Hz RMS [μT]')
         ax2.set_ylabel('THD zmierzonego pola magnetycznego [%]')
 
         ax2.set_ylim(bottom=0)

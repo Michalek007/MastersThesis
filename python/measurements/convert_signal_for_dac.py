@@ -26,11 +26,15 @@ class CovertSignalForDAC:
     def load_signal(self):
         self.loaded_signal = np.fromfile(self.filename, dtype=np.float32)
 
-    def convert_to_dac_signal(self, amp, offset):
+    def convert_to_dac_signal(self, amp, offset, dc=False):
         # max_value = min(amp, self.dac.Max_value)
-        self.loaded_signal -= np.min(self.loaded_signal)
+        if np.min(self.loaded_signal) < 0:
+            self.loaded_signal -= np.min(self.loaded_signal)
         self.dac_signal = np.round(self.loaded_signal * amp + offset).astype(np.uint16)
-        self.dac_signal += self.dac.Min_value
+        if dc:
+            pass
+        else:
+            self.dac_signal += self.dac.Min_value
         np.clip(self.dac_signal, a_min=0, a_max=self.dac.Max_value, out=self.dac_signal)
 
     def plot(self):
@@ -62,9 +66,9 @@ class CovertSignalForDAC:
         print("};")
         print("\n")
 
-    def convert_and_save(self, amp, offset=0):
+    def convert_and_save(self, amp, offset=0, dc=False):
         self.load_signal()
-        self.convert_to_dac_signal(amp, offset)
+        self.convert_to_dac_signal(amp, offset, dc)
         self.plot()
         self.print_c_array()
         self.save()

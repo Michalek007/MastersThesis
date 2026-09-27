@@ -125,7 +125,7 @@ if __name__ == "__main__":
     drv5055 = DRV5055(vcc=Constants.Vcc)
     drv425 = DRV425(vcc=Constants.Vcc, R_shunt=100)
 
-    ad8429 = AD8429(vs_positive=6.968, vs_negative=-6.577, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
+    ad8429 = AD8429(vs_positive=7.77, vs_negative=-8.5, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
     print("AD8429: ")
     print("Vs+ [V]: ", ad8429.Vs_p)
     print("Vs- [V]: ", ad8429.Vs_n)

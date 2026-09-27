@@ -25,7 +25,7 @@ class Config:
 
 
 class SignalProcessing:
-    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429, out_name=None, out_dir=None, helmholtz_coil: HelmholtzCoil = None, freq=50):
+    def __init__(self, dac_values, adc: ADC, sensor: Sensor, ad8429: AD8429, out_name=None, out_dir=None, helmholtz_coil: HelmholtzCoil = None, freq=50, kB=None):
         self.dac_values = np.array(dac_values, dtype=np.float64)
         self.offset = np.mean(self.dac_values)
         self.n_samples = len(dac_values)
@@ -35,7 +35,7 @@ class SignalProcessing:
         self.ad8429 = ad8429
         self.fft = FFT(signal=self.dac_values, sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
         self.fft.calculate()
-        self.fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
+        # self.fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
         self.fft.harmonics_amp = self.calculate_IEEE_harmonics()
         self.signal_analyser = SignalAnalyzer(signal=self.dac_values)
         self.name = out_name
@@ -44,6 +44,8 @@ class SignalProcessing:
         self.helmholtz_coil = helmholtz_coil
         self.freq = freq
         self.samples_per_period = UartConfig.SAMPLING_RATE / self.freq
+
+        self.kB = kB
 
     def calculate_IEEE_harmonics(self):
         iterations = self.n_samples // 2000
@@ -66,6 +68,8 @@ class SignalProcessing:
 
     @property
     def helmholtz_coil_B_uT_factor(self):
+        if self.kB:
+            return self.adc.Lsb * self.kB
         return self.adc.Lsb * self.helmholtz_coil.current_source.I_S * self.helmholtz_coil.B_S * 1e6
 
     @property
@@ -103,13 +107,13 @@ class SignalProcessing:
         self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_Vsensor_mV.csv"))
 
     def plot_v_adc(self):
-        factor = self.adc.Lsb * 1e3
-        self.plot(title="Napięcie od czasu przetwornika A/C", y_scale=factor, y_label="Napięcie [mV]")
-        self.fft.plot_fft(y_scale=factor, x_lim=2500, y_label="Napięcie [mV]"
+        factor = self.adc.Lsb
+        self.plot(title="Napięcie od czasu przetwornika A/C", y_scale=factor, y_label="Napięcie [V]")
+        self.fft.plot_fft(y_scale=factor, x_lim=2500, y_label="Napięcie [V]"
                           # , filename=Path(f"results/graphs/{self.name}_fft_Vadc_mV.png")
                          )
-        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_Vadc_mV.csv"))
-        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_Vadc_mV.csv"))
+        self.fft.print_harmonic_amplitudes(amp_scale=factor, filename=Path(f"{self.out_dir}/{self.name}_harmonics_Vadc_V.csv"))
+        self.signal_analyser.print_parameters(scale=factor, filename=Path(f"{self.out_dir}/{self.name}_Vadc_V.csv"))
 
     def plot_current(self):
         if not self.helmholtz_coil:
@@ -164,10 +168,11 @@ if __name__ == '__main__':
                 batch_size=UartConfig.BATCH_SIZE)
     if UART_CAPTURE:
         uart.connect()
-
+        # uart.send_waveform(filename=Path('in/dac_DC_0_uT_RD1_BS473.bin'))
+        # uart.send_waveform(filename=Path('in/dac_DC_20_uT_RD1_BS473.bin'))
         # uart.send_waveform(filename=Path('in/dac_sine_0_uT_RD1.bin'))
         # uart.send_waveform(filename=Path('in/dac_sine_3_uT_RD1.bin'))
-        uart.send_waveform(filename=Path('in/dac_sine_20_uT_RD1.bin'))
+        # uart.send_waveform(filename=Path('in/dac_sine_20_uT_RD1.bin'))
         # uart.send_waveform(filename=Path('in/harmonic_7_5uT_220kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_400kV.bin'))
         # uart.send_waveform(filename=Path('in/dac_harmonic_22uT_220kV.bin'))
@@ -176,8 +181,8 @@ if __name__ == '__main__':
         # uart.send_waveform(filename=Path('data/dac_sine_50_uT.bin'))
         # uart.send_waveform(filename=Path('data/dac_dc_50ut.bin'))
 
-        uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=1)
-        # uart.capture(record_seconds=1, waveform=Waveform.SINE)
+        # uart.capture(record_seconds=1, waveform=Waveform.LAST_SENT, k=1,dac_disabled=True)
+        uart.capture(record_seconds=1, waveform=Waveform.SINE)
         # uart.capture(record_seconds=1, waveform=Waveform.SINE_ODD_HARMONICS)
         # uart.capture(record_seconds=5, waveform=Waveform.SQUARE_WAVE)
         uart.close()
@@ -198,14 +203,13 @@ if __name__ == '__main__':
 
     ad8429_g2 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=2)
     ad8429_g30 = AD8429(vs_positive=Config.AD8429_VP, vs_negative=Config.AD8429_VN, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
-    print(ad8429_g30.G)
 
-    alt021 = ALT021(vcc=Config.SENSOR_VCC)
-    hmc1001 = HMC1001(vcc=Config.SENSOR_VCC)
-    drv5055 = DRV5055(vcc=Config.SENSOR_VCC)
-    drv425 = DRV425(vcc=Config.SENSOR_VCC, R_shunt=100)
+    # sensor = ALT021(vcc=Config.SENSOR_VCC)
+    # sensor = HMC1001(vcc=Config.SENSOR_VCC)
+    # sensor = DRV5055(vcc=Config.SENSOR_VCC)
+    sensor = DRV425(vcc=Config.SENSOR_VCC, R_shunt=100)
 
-    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=hmc1001, ad8429=ad8429_g30, out_name="TEST_HMC1001")
+    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429_g2, out_name="TEST_SENSOR")
     sp.plot_magnetic_field()
     # sp_alt021.plot_v_sensor()
 
@@ -217,7 +221,7 @@ if __name__ == '__main__':
     data_reader = DataReader(filename=uart.out_ref_file, adc=adc)
     data_reader.read()
     data_reader.plot(periods=2, scale_to_v=True)
-    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=hmc1001, ad8429=ad8429_g30, out_name="TEST_H_COIL", helmholtz_coil=helmholtz_coil)
+    sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429_g2, out_name="TEST_H_COIL", helmholtz_coil=helmholtz_coil)
     sp.plot_current()
     sp.plot_magnetic_field()
 

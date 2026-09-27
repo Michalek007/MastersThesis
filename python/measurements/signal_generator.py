@@ -20,14 +20,15 @@ class Signal(Enum):
 
 
 class SignalGenerator:
-    def __init__(self, n_samples, harmonics_dict: dict, filename: Path):
+    def __init__(self, n_samples, harmonics_dict: dict, filename: Path, n_periods=1):
         self.n_samples = n_samples
         self.harmonics_dict = harmonics_dict
         if not self.harmonics_dict:
             self.harmonics_dict = {1: 1.0}
         self.filename = filename
         self.name = self.filename.parts[-1].split(".")[-2]
-        self.t = np.linspace(0, 1, self.n_samples, endpoint=False)
+        self.n_periods = n_periods
+        self.t = np.linspace(0, self.n_periods, self.n_samples, endpoint=False)
         self.signal = np.zeros_like(self.t)
         self.fft: FFT
         self.analyzer: SignalAnalyzer
@@ -61,6 +62,7 @@ class SignalGenerator:
         print(f"--- Zapisano {len(self.signal)} próbek do pliku: {self.filename} ---")
 
     def plot(self, amp=1, freq=Config.FREQ, y_label="Amplituda", save=False, name=None):
+        freq *= self.n_periods
         plt.figure(figsize=(10, 5))
         plt.plot(self.t * 1/freq, self.signal*amp)
         plt.title(self.filename)
@@ -148,4 +150,4 @@ if __name__ == '__main__':
     # SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_3, filename=Path("data/harmonics_3.bin")).generate()
     # SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/sine.bin")).generate()
     # SignalGenerator(n_samples=SAMPLES, harmonics_dict={1: 1.0}, filename=Path("data/dc.bin")).generate(signal_type=Signal.DC)
-    SignalGenerator(n_samples=SAMPLES, harmonics_dict=harmonic_4, filename=Path("data/test.bin")).generate()
+    SignalGenerator(n_samples=2000, harmonics_dict=harmonic_4, filename=Path("data/test.bin"), n_periods=4).generate()

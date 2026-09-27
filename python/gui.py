@@ -1,5 +1,5 @@
-from measurements.uart import UART, DataReader, Config, Waveform
-from calculations.sensors import AD8429, ALT021, Sensor
+from measurements.uart import UART, DataReader, UartConfig, Waveform
+from calculations.sensors import AD8429, ALT021, Sensor, DRV425
 from calculations.converter import ADC
 
 import tkinter as tk
@@ -14,9 +14,9 @@ import time
 class ConfigGUI:
     SAMPLING_RATE = 10e3
     FREQ = 50
-    PERIOD = 1/FREQ
-    SAMPLES_PER_PERIOD = SAMPLING_RATE*PERIOD
-    TIME_STEP = 1/SAMPLING_RATE
+    PERIOD = 1 / FREQ
+    SAMPLES_PER_PERIOD = SAMPLING_RATE * PERIOD
+    TIME_STEP = 1 / SAMPLING_RATE
     SENSOR_VCC = 5
     AD8429_VP = 7.8
     AD8429_VN = -7.6
@@ -63,7 +63,7 @@ class GUI:
         self.capture_end_time = time.time() + record_seconds + 1.0
 
         # Send the start packet
-        start_packet = bytes([ord("S"), record_seconds, waveform.value])
+        start_packet = bytes([ord("C"), record_seconds, waveform.value, 1])
         self.uart.serial.write(start_packet)
 
         # Start the non-blocking read/plot loop
@@ -83,8 +83,18 @@ class GUI:
         # 2. If we have a full batch, unpack and plot it
         if len(self.buffer) == target_bytes:
             # Unpack exact bytes into tuple of 400 integers
-            self.ydata = (np.array(struct.unpack(f">{self.uart.batch_size}H", self.buffer)) * self.adc.Lsb - self.ad8429.V_ref) / self.ad8429.G / self.sensor.S * 1e6
+            self.ydata = (np.array(struct.unpack(f">{self.uart.batch_size}H",
+                                                 self.buffer)) * self.adc.Lsb - self.ad8429.V_ref) / self.ad8429.G / self.sensor.S * 1e6
+                                                 # self.buffer)) * self.adc.Lsb)
             # self.ydata = np.array(struct.unpack(f">{self.uart.batch_size}H", self.buffer)) * self.adc.Lsb
+
+            # Calculate signal parameters
+            offset = np.mean(self.ydata)
+            ac_rms = np.std(self.ydata)
+            # rms = np.sqrt(np.mean(self.ydata ** 2))
+
+            # Display parameters on the plot title
+            self.ax.set_title(f"AC RMS: {ac_rms} | Offset: {offset:}")
 
             # self.line.set_data(self.xdata, self.ydata)
             self.line.set_ydata(self.ydata)
@@ -106,16 +116,18 @@ class GUI:
 
 
 if __name__ == '__main__':
-    uart = UART(serial_port=Config.SERIAL_PORT, baudrate=Config.BAUDRATE, out_file=Config.OUT_FILE,
+    uart = UART(serial_port=UartConfig.SERIAL_PORT, baudrate=UartConfig.BAUDRATE, out_file=UartConfig.OUT_FILE,
                 # batch_size=Config.BATCH_SIZE
-                batch_size = Config.BATCH_SIZE*2
+                batch_size=UartConfig.BATCH_SIZE * 2
                 )
     uart.connect()
     # uart.send_waveform(Path("data/sine_AC_50uT_DC_20uT.bin"))
 
     adc = ADC(vcc=3.3, resolution_bits=16)
-    ad8429_g2 = AD8429(vs_positive=ConfigGUI.AD8429_VP, vs_negative=ConfigGUI.AD8429_VN, v_reference=adc.Vcc/2, gain=2)
-    alt021 = ALT021(vcc=ConfigGUI.SENSOR_VCC)
+    ad8429_g2 = AD8429(vs_positive=ConfigGUI.AD8429_VP, vs_negative=ConfigGUI.AD8429_VN, v_reference=adc.Vcc / 2,
+                       gain=2)
+    # sensor = ALT021(vcc=ConfigGUI.SENSOR_VCC)
+    sensor = DRV425(vcc=ConfigGUI.SENSOR_VCC, R_shunt=100)
 
     # uart.capture(record_seconds=5, waveform=Waveform.SINE)
     # adc = ADC(vcc=3.3, resolution_bits=16)
@@ -126,7 +138,8 @@ if __name__ == '__main__':
     # data_reader.analyse_signal()
     # data_reader.analyse_signal(scale_to_v=True)
 
-    gui = GUI(uart=uart, adc=adc, sensor=alt021, ad8429=ad8429_g2)
+    gui = GUI(uart=uart, adc=adc, sensor=sensor, ad8429=ad8429_g2)
     # gui.capture(record_seconds=5, waveform=Waveform.SINE)
-    gui.capture(record_seconds=5, waveform=Waveform.SINE_ODD_HARMONICS)
+    # gui.capture(record_seconds=3, waveform=Waveform.SINE_20_uT_RMS)
+    gui.capture(record_seconds=3, waveform=Waveform.SINE)
     gui.run()
