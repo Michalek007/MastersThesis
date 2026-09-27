@@ -38,7 +38,7 @@
 #define UART_TX_BUF_SIZE (DATA_SIZE * 2)  // batch size
 #define UART_RX_BUF_SIZE 4
 #define SAMPLES_PER_SECOND 10000
-#define DAC_LUT_SIZE 1000
+#define DAC_LUT_SIZE 2000
 
 //typedef struct __attribute__((packed)) {
 //	uint32_t sync;
@@ -100,7 +100,7 @@ volatile uint8_t uartTxRequest = 0;
 volatile uint8_t uartRxReceived = 0;
 
 const uint16_t *dac_lut = dc_0;
-uint16_t dac_lut_rx[1000] = { 0 };
+uint16_t dac_lut_rx[DAC_LUT_SIZE] = { 0 };
 
 //UartPacket uartPacket = { .sync = 0xDEADBEEF, .data = { 0 } };
 /* USER CODE END 0 */
@@ -241,46 +241,46 @@ int main(void) {
 					dac_lut = dac_lut_rx;
 				}
 
-				switch (uartRxBuffer[3]) {
-				case 1:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279);
-					break; // 50 Hz
-				case 2:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 639);
-					break; // 100 Hz
-				case 4:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 319);
-					break; // 200 Hz
-				case 5:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 255);
-					break; // 250 Hz
-				case 8:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 159);
-					break; // 400 Hz
-				case 10:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 127);
-					break; // 500 Hz
-				case 16:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 79);
-					break; // 800 Hz
-				case 20:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 63);
-					break; // 1000 Hz
-				case 32:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 39);
-					break; // 1600 Hz
-				case 40:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 31);
-					break; // 2000 Hz
-				default:
-					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279); // Default 50 Hz
-					break;
-				}
-				htim2.Instance->EGR = TIM_EGR_UG;
-				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+//				switch (uartRxBuffer[3]) {
+//				case 1:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279);
+//					break; // 50 Hz
+//				case 2:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 639);
+//					break; // 100 Hz
+//				case 4:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 319);
+//					break; // 200 Hz
+//				case 5:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 255);
+//					break; // 250 Hz
+//				case 8:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 159);
+//					break; // 400 Hz
+//				case 10:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 127);
+//					break; // 500 Hz
+//				case 16:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 79);
+//					break; // 800 Hz
+//				case 20:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 63);
+//					break; // 1000 Hz
+//				case 32:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 39);
+//					break; // 1600 Hz
+//				case 40:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 31);
+//					break; // 2000 Hz
+//				default:
+//					__HAL_TIM_SET_AUTORELOAD(&htim2, 1279); // Default 50 Hz
+//					break;
+//				}
+//				htim2.Instance->EGR = TIM_EGR_UG;
+//				__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
 
 				if (uartRxBuffer[0] == 'S' || uartRxBuffer[0] == 'C') {
-					HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, 1000, DAC_ALIGN_12B_R);
+					HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) dac_lut, DAC_LUT_SIZE, DAC_ALIGN_12B_R);
 					HAL_TIM_Base_Start(&htim2);
 
 					if (uartRxBuffer[0] == 'C') {
@@ -306,7 +306,7 @@ int main(void) {
 				HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
 			} else if (uartRxBuffer[0] == 'R') {
 				uartRxReceived = 0;
-				HAL_StatusTypeDef err = HAL_UART_Receive(&huart3, (uint8_t*) dac_lut_rx, 2000, 1000);
+				HAL_StatusTypeDef err = HAL_UART_Receive(&huart3, (uint8_t*) dac_lut_rx, DAC_LUT_SIZE * 2, 1000);
 				HAL_UART_Receive_IT(&huart3, uartRxBuffer, UART_RX_BUF_SIZE);
 			}
 		}
@@ -570,7 +570,7 @@ static void MX_TIM2_Init(void) {
 	htim2.Instance = TIM2;
 	htim2.Init.Prescaler = 0;
 	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim2.Init.Period = 1279;
+	htim2.Init.Period = 639;
 	htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
