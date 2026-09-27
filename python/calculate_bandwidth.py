@@ -53,7 +53,7 @@ class SensorBodeAnalyzer:
                 'meas_rms': meas_rms,
                 'delta_phi': delta_phi
             })
-            if f_ref == 50:
+            if abs(f_ref-50) < 1:
                 ref_50hz = ref_rms
                 meas_50hz = meas_rms
 

@@ -1,5 +1,5 @@
 from measurements.uart import UART, DataReader, UartConfig, Waveform
-from calculations.sensors import AD8429, ALT021, Sensor, DRV425
+from calculations.sensors import AD8429, ALT021, Sensor, DRV425, HMC1001
 from calculations.converter import ADC
 
 import tkinter as tk
@@ -124,10 +124,13 @@ if __name__ == '__main__':
     # uart.send_waveform(Path("data/sine_AC_50uT_DC_20uT.bin"))
 
     adc = ADC(vcc=3.3, resolution_bits=16)
-    ad8429_g2 = AD8429(vs_positive=ConfigGUI.AD8429_VP, vs_negative=ConfigGUI.AD8429_VN, v_reference=adc.Vcc / 2,
-                       gain=2)
+    # ad8429 = AD8429(vs_positive=ConfigGUI.AD8429_VP, vs_negative=ConfigGUI.AD8429_VN, v_reference=adc.Vcc / 2,
+    #                    gain=2)
+    ad8429 = AD8429(vs_positive=ConfigGUI.AD8429_VP, vs_negative=ConfigGUI.AD8429_VN, v_reference=adc.Vcc / 2,
+                       gain=30)
     # sensor = ALT021(vcc=ConfigGUI.SENSOR_VCC)
-    sensor = DRV425(vcc=ConfigGUI.SENSOR_VCC, R_shunt=100)
+    sensor = HMC1001(vcc=ConfigGUI.SENSOR_VCC)
+    # sensor = DRV425(vcc=ConfigGUI.SENSOR_VCC, R_shunt=100)
 
     # uart.capture(record_seconds=5, waveform=Waveform.SINE)
     # adc = ADC(vcc=3.3, resolution_bits=16)
@@ -138,7 +141,7 @@ if __name__ == '__main__':
     # data_reader.analyse_signal()
     # data_reader.analyse_signal(scale_to_v=True)
 
-    gui = GUI(uart=uart, adc=adc, sensor=sensor, ad8429=ad8429_g2)
+    gui = GUI(uart=uart, adc=adc, sensor=sensor, ad8429=ad8429)
     # gui.capture(record_seconds=5, waveform=Waveform.SINE)
     # gui.capture(record_seconds=3, waveform=Waveform.SINE_20_uT_RMS)
     gui.capture(record_seconds=3, waveform=Waveform.SINE)

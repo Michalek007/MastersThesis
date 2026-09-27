@@ -115,8 +115,9 @@ if __name__ == '__main__':
     print("Brms max for sine: ", helmholtz_coil.B((dac.V_max-dac.V_min) / 2 / current_source.R_divider / current_source.R_sense / (2 ** 0.5)) * 1e6, " uT")
     print()
 
+    kB = (62.3397 + 62.3421 + 62.25648) / 3
     current_source = CurrentSource(R=7.5, dac=dac, R_divider=1)
-    helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=0.5176*1e-6/1e-3)
+    helmholtz_coil = HelmholtzCoilReal(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source, B_S=kB*1e-6*current_source.V_S)
     print("B (200mA)", helmholtz_coil.B(0.2) * 1e6, " uT")
     print("S_B ", helmholtz_coil.B_S * 1e6/1e3, " uT/mA")
     print("S_I ", helmholtz_coil.I_S * 1e3/1e6, " mA/uT")

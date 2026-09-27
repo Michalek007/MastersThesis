@@ -32,7 +32,10 @@ class MagneticFieldSignalGenerator:
 
     @B_1.setter
     def B_1(self, B_1_RMS):
-        self._B_1 = B_1_RMS * math.sqrt(2)
+        if self.signal_type == Signal.DC:
+            self._B_1 = B_1_RMS
+        else:
+            self._B_1 = B_1_RMS * math.sqrt(2)
 
     def dac_value(self, B):
         return self.dac.Value(B * self.helmholtz_coil.I_S * self.current_source.V_S)

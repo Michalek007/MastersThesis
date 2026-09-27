@@ -24,9 +24,9 @@ class Config:
     AD8429_V_REF = 3.3 / 2
 
     # SUT = "ALT021"
-    SUT = "DRV425"
+    # SUT = "DRV425"
     # SUT = "DRV5055"
-    # SUT = "HMC1001"
+    SUT = "HMC1001"
     # SUT = "NO_SENSOR"
 
     # ALL_SIGNALS = 1
@@ -35,9 +35,9 @@ class Config:
     R_DIVIDER = "1"
     # R_DIVIDER = "2"
 
-    # TEST_PROCEDURE = "TP0"
+    TEST_PROCEDURE = "TP0"
     # TEST_PROCEDURE = "TP1"
-    TEST_PROCEDURE = "TP2"
+    # TEST_PROCEDURE = "TP2"
     # TEST_PROCEDURE = "TP3"
 
     R = (8 + 0.4 + 0.15) / 100
@@ -62,8 +62,12 @@ if __name__ == '__main__':
     else:
         helmholtz_coil = HelmholtzCoil(n=45, R=Config.R, current_source=current_source)
 
+    if Config.TEST_PROCEDURE == "TP0":
+        offset = 0.0
+    else:
+        offset = 0.1
     mf_signal_generator = MagneticFieldSignalGenerator(
-        B_1=10e-6, DAC_V_offset=0.1, harmonics_dict={1: 1.0},
+        B_1=10e-6, DAC_V_offset=offset, harmonics_dict={1: 1.0},
         n_samples=2000, signal_type=Signal.SINE, filename=Path(f"data/sine_10_uT_{Config.R_DIVIDER}.bin"),
         helmholtz_coil=helmholtz_coil, current_source=current_source, dac=dac
     )
@@ -103,12 +107,16 @@ if __name__ == '__main__':
     #     tp2_names = [f"sine_15_uT_RD{Config.R_DIVIDER}", f"sine_20_uT_RD{Config.R_DIVIDER}", f"sine_50_uT_RD{Config.R_DIVIDER}"]
     # k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
     k_values = [3, 5, 7, 9, 11, 15, 21, 31, 41, 50]
+    k_values.reverse()
     if Config.TEST_PROCEDURE == "TP2":
-        b1_values_rms = [5e-6, 20e-6, 50e-6]
+        b1_values_rms = [5e-6, 10e-6, 15e-6, 20e-6]
+        # b1_values_rms = [5e-6, 20e-6, 50e-6]
+        # b1_values_rms = [10e-6, 15e-6]
         tp_names = []
         for b1_rms in b1_values_rms:
             for k in k_values:
-                name = f"sine_{b1_rms*1e6}_uT_RD{Config.R_DIVIDER}_BS{int(helmholtz_coil.B_S * 1e6)}_k{k}"
+                # int(b1_rms * 1e6)
+                name = f"sine_{int(b1_rms * 1e6)}_uT_RD{Config.R_DIVIDER}_BS{int(helmholtz_coil.B_S * 1e6)}_k{k}"
                 tp_names.append(name)
                 if Config.GENERATE_DATA:
                     mf_signal_generator.n_periods = k

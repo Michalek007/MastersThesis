@@ -57,7 +57,7 @@ class FFT:
         # 5. The DC component (0 Hz) doesn't have a negative twin,
         # so we must divide it back by 2
         self.fft[0] = self.fft[0] / 2.0
-        self.phase[self.fft < 1e-5] = 0
+        self.phase[self.fft < 1e-6*self.fft.max()] = 0
         self.phase = np.degrees(self.phase)
 
     def calculate_window(self, window: Window = Window.HANNING):
@@ -166,7 +166,7 @@ class FFT:
             target_freq = h * fundamental_freq
 
             # 1. Znajdź indeks centralny dla tej harmonicznej
-            k = int(target_freq / freq_step)
+            k = int(round(target_freq / freq_step))
 
             # 2. Oblicz energię podgrupy harmonicznej (zgodnie z IEC: prążek centralny +/- 1 prążek)
             if k + 1 < len(amplitudes_rms):

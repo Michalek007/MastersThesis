@@ -48,10 +48,11 @@ class SignalProcessing:
         self.kB = kB
 
     def calculate_IEEE_harmonics(self):
-        iterations = self.n_samples // 2000
+        segment_length = int(UartConfig.SAMPLING_RATE * 0.2)
+        iterations = self.n_samples // segment_length
         fft_harmonics = []
         for i in range(iterations):
-            fft = FFT(signal=self.dac_values[i*2000:(i+1)*2000], sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
+            fft = FFT(signal=self.dac_values[i*segment_length:(i+1)*segment_length], sampling_rate=UartConfig.SAMPLING_RATE, remove_offset=True)
             fft.calculate()
             fft.get_harmonic_amplitudes(fundamental_freq=50, max_freq=2500, snr_threshold=3.0)
             fft_harmonics.append(fft.harmonics_amp)
@@ -61,7 +62,7 @@ class SignalProcessing:
             result_harmonics.append({
                 'harmonic': harmonic_group[0]['harmonic'],
                 'frequency': harmonic_group[0]['frequency'],
-                'rms': np.mean([h['rms'] for h in harmonic_group]),
+                'rms': np.sqrt(np.mean([h['rms']**2 for h in harmonic_group])),
                 'phase': np.mean([h['phase'] for h in harmonic_group])
             })
         return result_harmonics

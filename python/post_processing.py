@@ -22,8 +22,8 @@ class Config:
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
     # SUT = "ALT021"
-    # SUT = "HMC1001"
-    SUT = "DRV425"
+    SUT = "HMC1001"
+    # SUT = "DRV425"
     # PARENT_DIR = Path(f"final/{SUT}/TP3/")
     PARENT_DIR = Path(f"final/{SUT}/")
     RESULTS_DIR = Path(f"{PARENT_DIR}/RESULTS")
@@ -32,16 +32,20 @@ class Config:
     OUT_K_DIR = Path(f"{OUT_DIR}")
     IN_DIR = Path(f"/in/")
 
+    CALIBRATION_DC = 0
     CALIBRATION = 1
-    CALIBRATION_N = 4
-    if CALIBRATION_N == 2:
-        OUT_DIR = Path(f"{PARENT_DIR}/OUT/2")
-    elif CALIBRATION_N == 3:
-        OUT_DIR = Path(f"{PARENT_DIR}/OUT/3")
-    elif CALIBRATION_N == 3:
-        OUT_DIR = Path(f"{PARENT_DIR}/OUT/4")
+    CALIBRATION_N = 0
+    if CALIBRATION:
+        if CALIBRATION_N == 2:
+            OUT_DIR = Path(f"{PARENT_DIR}/OUT/2")
+        elif CALIBRATION_N == 3:
+            OUT_DIR = Path(f"{PARENT_DIR}/OUT/3")
+        elif CALIBRATION_N == 4:
+            OUT_DIR = Path(f"{PARENT_DIR}/OUT/4")
+        elif CALIBRATION_N == 5:
+            OUT_DIR = Path(f"{PARENT_DIR}/OUT/DC")
+    # TEST_PROCEDURE = "TP0"
     TEST_PROCEDURE = "TP1"
-    # TEST_PROCEDURE = "TP1"
     # TEST_PROCEDURE = "TP2"
     # TEST_PROCEDURE = "TP3"
 
@@ -54,14 +58,27 @@ class Config:
 
     RD = "RD1"
 
+    REVERSE_DATA = 1
+
     R = 8.55/100
 
-    kB = None
-    S = None
+    # kB = None
+    kB = (62.3397 + 62.3421 + 62.25648) / 3
+    # S = None
+    # S = 2600
 
 
-def get_sut_name(b_value):
-    return f"{Config.SUT}_sine_{int(b_value)}_uT_RD1{Config.BS}"
+def get_sut_name(b_value, k=1, dc=False):
+    signal_type_str = "DC" if dc else "sine"
+    if k == 1:
+        if Config.SUT == "DRV425" and Config.TEST_PROCEDURE == "TP2":
+            return f"{Config.SUT}_{signal_type_str}_{int(b_value)}.0_uT_RD1{Config.BS}"
+        return f"{Config.SUT}_{signal_type_str}_{int(b_value)}_uT_RD1{Config.BS}"
+    else:
+        if Config.SUT == "DRV425" and Config.TEST_PROCEDURE == "TP2":
+            return f"{Config.SUT}_{signal_type_str}_{int(b_value)}.0_uT_RD1{Config.BS}_k{k}"
+        return f"{Config.SUT}_{signal_type_str}_{int(b_value)}_uT_RD1{Config.BS}_k{k}"
+
 def get_units_str(units="magnetic"):
     if units == "magnetic":
         units_str = "B_uT"
@@ -72,17 +89,17 @@ def get_units_str(units="magnetic"):
     else:
         units_str = "Vsensor_mV"
     return units_str
-def get_out_file(b_value):
-    return f"{Config.OUT_DIR}/out_{get_sut_name(b_value)}.bin"
-def get_out_ref_file(b_value):
-    return f"{Config.OUT_DIR}/out_{get_sut_name(b_value)}_ref.bin"
+def get_out_file(b_value, k=1, dc=False):
+    return f"{Config.OUT_DIR}/out_{get_sut_name(b_value, k=k, dc=dc)}.bin"
+def get_out_ref_file(b_value, k=1, dc=False):
+    return f"{Config.OUT_DIR}/out_{get_sut_name(b_value, k=k, dc=dc)}_ref.bin"
 
-def get_data_file(b_value, ref=False, units="magnetic", harmonics=False):
+def get_data_file(b_value, ref=False, units="magnetic", harmonics=False, k=1, dc=False):
     harmonic_str = "_harmonics" if harmonics else ""
     if ref:
-        return f"{Config.RESULTS_DIR}/{get_sut_name(b_value)}_ref{harmonic_str}_{get_units_str(units)}.csv"
+        return f"{Config.RESULTS_DIR}/{get_sut_name(b_value, k=k, dc=dc)}_ref{harmonic_str}_{get_units_str(units)}.csv"
     else:
-        return f"{Config.RESULTS_DIR}/{get_sut_name(b_value)}{harmonic_str}_{get_units_str(units)}.csv"
+        return f"{Config.RESULTS_DIR}/{get_sut_name(b_value, k=k, dc=dc)}{harmonic_str}_{get_units_str(units)}.csv"
 
 
 if __name__ == '__main__':
@@ -104,7 +121,7 @@ if __name__ == '__main__':
     ad8429 = ad8429_g2
 
     sensor = Sensor(sensivity_v=None, vcc=Config.SENSOR_VCC, offset_max=0, offset_min=0, S=Config.S)
-    if Config.SUT == "ALTO21":
+    if Config.SUT == "ALT021":
         sensor = ALT021(vcc=Config.SENSOR_VCC)
         ad8429 = ad8429_g2
     elif Config.SUT == "HMC1001":
@@ -116,10 +133,11 @@ if __name__ == '__main__':
     elif Config.SUT == "DRV5055":
         sensor = DRV5055(vcc=Config.SENSOR_VCC)
         ad8429 = ad8429_g30
-    sensor._S = Config.S
+    if Config.S:
+        sensor._S = Config.S
 
     if Config.TEST_PROCEDURE == "TP0":
-        dc_values = [0, 5, 20]
+        dc_values = [0, 5, 20, 40, 60, 80, 100]
         for b in dc_values:
             if Config.PROCESS_DATA:
                 name = f"{Config.OUT_DIR}/out_{Config.SUT}_DC_{b}_uT_{Config.RD}_BS{int(helmholtz_coil.B_S * 1e6)}.bin"
@@ -133,112 +151,114 @@ if __name__ == '__main__':
                 analyzer.plot(save_path='widmo_szumu_czujnik_A.png', show=True)
             break
     if Config.TEST_PROCEDURE == "TP1":
-        b_values = [0, 1, 3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+        if Config.CALIBRATION_DC:
+            b_values = [0, 5, 20, 40, 60, 80, 100]
+            dc = True
+        else:
+            b_values = [0, 1, 3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+            dc = False
+
         # b_values = [0, 1, 3, 5, 7, 10, 15, 20, 25]
         # b_values = [0, 1, 3, 5, 7, 10]
         # b_values = [15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
-        ref_files = []
-        meas_files = []
-        meas_files_v = []
+        # ref_files = []
+        # ref_files_v = []
+        # meas_files = []
+        # meas_files_v = []
         ref_harmonic_files = []
+        ref_harmonic_files_v = []
         meas_harmonic_files = []
         meas_harmonic_files_v = []
-        ref_files_v = []
-        ref_harmonic_files_v = []
         for b in b_values:
             if Config.GENERATE_DATA:
-                data_reader = DataReader(filename=Path(get_out_file(b_value=b)), adc=adc)
+                data_reader = DataReader(filename=Path(get_out_file(b_value=b, dc=dc)), adc=adc)
                 data_reader.read()
                 # data_reader.plot(periods=2, scale_to_v=True)
                 # data_reader.fft(scale_to_v=True)
                 sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429,
-                                             out_name=get_sut_name(b_value=b), out_dir=Config.RESULTS_DIR)
+                                             out_name=get_sut_name(b_value=b, dc=dc), out_dir=Config.RESULTS_DIR)
                 sp.plot_magnetic_field()
                 sp.plot_v_sensor()
 
-                data_reader = DataReader(filename=Path(get_out_ref_file(b_value=b)), adc=adc)
+                data_reader = DataReader(filename=Path(get_out_ref_file(b_value=b, dc=dc)), adc=adc)
                 data_reader.read()
                 # data_reader.plot(periods=2, scale_to_v=True)
                 # data_reader.fft(scale_to_v=True)
                 sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429, helmholtz_coil=helmholtz_coil, kB=Config.kB,
-                                             out_name=get_sut_name(b_value=b)+"_ref", out_dir=Config.RESULTS_DIR)
+                                             out_name=get_sut_name(b_value=b, dc=dc)+"_ref", out_dir=Config.RESULTS_DIR)
                 # sp.plot_current()
                 sp.plot_magnetic_field()
                 if Config.CALIBRATION:
                     sp.plot_v_adc()
 
-            # ref_files.append(get_data_file(b_value=b, ref=True, units="current"))
-            # ref_harmonic_files.append(get_data_file(b_value=b, ref=True, units="current", harmonics=True))
-            #
-            meas_files.append(get_data_file(b_value=b, ref=False, units="magnetic"))
-            meas_harmonic_files.append(get_data_file(b_value=b, ref=False, units="magnetic", harmonics=True))
+            # meas_files.append(get_data_file(b_value=b, ref=False, units="magnetic", dc=dc))
+            # ref_files.append(get_data_file(b_value=b, ref=True, units="magnetic", dc=dc))
+            # ref_files_v.append(get_data_file(b_value=b, ref=True, units="voltage_adc", dc=dc))
+            # meas_files_v.append(get_data_file(b_value=b, ref=False, units="voltage", dc=dc))
 
-            ref_files.append(get_data_file(b_value=b, ref=True, units="magnetic"))
-            ref_harmonic_files.append(get_data_file(b_value=b, ref=True, units="magnetic", harmonics=True))
-
-            ref_files_v.append(get_data_file(b_value=b, ref=True, units="voltage_adc"))
-            ref_harmonic_files_v.append(get_data_file(b_value=b, ref=True, units="voltage_adc", harmonics=True))
-
-            meas_files_v.append(get_data_file(b_value=b, ref=False, units="voltage"))
-            meas_harmonic_files_v.append(get_data_file(b_value=b, ref=False, units="voltage", harmonics=True))
-
+            meas_harmonic_files.append(get_data_file(b_value=b, ref=False, units="magnetic", harmonics=True, dc=dc))
+            meas_harmonic_files_v.append(get_data_file(b_value=b, ref=False, units="voltage", harmonics=True, dc=dc))
+            ref_harmonic_files.append(get_data_file(b_value=b, ref=True, units="magnetic", harmonics=True, dc=dc))
+            ref_harmonic_files_v.append(get_data_file(b_value=b, ref=True, units="voltage_adc", harmonics=True, dc=dc))
 
         if Config.PROCESS_DATA:
-            sensor = CalculateSensorParams(measured_files=meas_files, reference_files=ref_files,
-                                           harmonics_files=meas_harmonic_files,
-                                           ref_harmonics_files=ref_harmonic_files)
+            sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files)
             params = sensor.calculate_params()
             print(params)
             sensor.plot_graphs(filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Bref_uT_{min(b_values)}_{max(b_values)}")
 
-            sensor = CalculateSensorParams(measured_files=meas_files_v, reference_files=ref_files,
-                                           harmonics_files=meas_harmonic_files_v,
-                                           ref_harmonics_files=ref_harmonic_files)
+            sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files_v, ref_harmonics_files=ref_harmonic_files)
             params = sensor.calculate_params()
             print(params)
             sensor.plot_graphs(y_label="Napięcie na wyjściu czujnika RMS [mV]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Vsensor_mV_Bref_uT_{min(b_values)}_{max(b_values)}")
             if Config.CALIBRATION:
-                sensor = CalculateSensorParams(measured_files=meas_files, reference_files=ref_files_v, harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files_v)
+                sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files_v)
                 params = sensor.calculate_params()
                 print(params)
                 sensor.plot_graphs(x_label="Napięcie na rezystorze pomiarowym [V]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Vref_V_{min(b_values)}_{max(b_values)}")
 
     elif Config.TEST_PROCEDURE == "TP2":
-        b_values = [1, 5, 10, 15, 20, 50]
-        k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
+        # b_values = [1, 5, 10, 15, 20, 50]
+        # b_values = [5, 20, 50]
+        b_values = [5, 10, 15, 20]
+        # b_values = [5]
+        # k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
+        k_values = [1, 3, 5, 7, 9, 11, 15, 21, 31, 41, 50]
+
+        # k_values = [21, 31, 41, 50]
         if Config.GENERATE_DATA:
             for b in b_values:
                 for k in k_values:
-                    out_file = Path(f"{Config.OUT_K_DIR}/out_{Config.SUT}_sine_{b}_uT_{Config.RD}_k{k}{Config.BS}.bin")
+                    out_file = Path(get_out_file(b_value=b, k=k))
+                    out_file_ref = Path(get_out_ref_file(b_value=b, k=k))
                     data_reader = DataReader(filename=out_file, adc=adc)
                     data_reader.read()
                     # data_reader.plot(periods=2, scale_to_v=True)
                     # data_reader.fft(scale_to_v=True)
                     sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429,
-                                          out_name=get_sut_name(b_value=b)+f"_k{k}", out_dir=Config.RESULTS_DIR)
-                    # sp.plot_magnetic_field()
+                                          out_name=get_sut_name(b_value=b, k=k), out_dir=Config.RESULTS_DIR, freq=k*50)
+                    sp.plot_magnetic_field()
                     # sp.plot_v_sensor()
-                    sp.calculate_magnetic_filed_harmonics()
+                    # sp.calculate_magnetic_filed_harmonics()
 
-                    out_file_ref = Path(f"{Config.OUT_K_DIR}/out_{Config.SUT}_sine_{b}_uT_{Config.RD}_k{k}{Config.BS}_ref.bin")
+
                     data_reader = DataReader(filename=out_file_ref, adc=adc)
                     data_reader.read()
                     # data_reader.plot(periods=2, scale_to_v=True)
                     # data_reader.fft(scale_to_v=True)
                     sp = SignalProcessing(dac_values=data_reader.values, adc=adc, sensor=sensor, ad8429=ad8429, helmholtz_coil=helmholtz_coil, kB=Config.kB,
-                                          out_name=get_sut_name(b_value=b)+f"_k{k}_ref", out_dir=Config.RESULTS_DIR)
-                    # sp.plot_magnetic_field()
-                    sp.calculate_magnetic_filed_harmonics()
-
+                                          out_name=get_sut_name(b_value=b, k=k)+f"_ref", out_dir=Config.RESULTS_DIR, freq=k*50)
+                    sp.plot_magnetic_field()
+                    # sp.calculate_magnetic_filed_harmonics()
 
         if Config.PROCESS_DATA:
             input_files = []
             for b in b_values:
                 files_amp = []
                 for k in k_values:
-                    files_amp.append((
-                                      f"{Config.RESULTS_DIR}/{Config.SUT}_sine_{b}_uT_{Config.RD}_k{k}_harmonics_B_uT.csv",
-                                      f"{Config.RESULTS_DIR}/{Config.SUT}_sine_{b}_uT_{Config.RD}_k{k}_ref_harmonics_B_uT.csv"))
+                    files_amp.append(
+                        (get_data_file(b, harmonics=True, k=k), get_data_file(b, ref=True, harmonics=True, k=k))
+                    )
                 input_files.append([f"{b} μT RMS", files_amp])
             analyzer = SensorBodeAnalyzer(input_files)
             analyzer.analyze()
@@ -249,8 +269,8 @@ if __name__ == '__main__':
             tp3_b1_values_rms_names = ["7_5uT", "1_8uT", "22uT"]
             # tp3_b1_values_rms_names = ["7_5uT", "1_9uT",  "1_8uT", "22uT", "19uT", "13uT"]
             # tp3_b1_values_rms_names = ["22uT"]
-            harmonics_data_names = ["500kV", "220kV", "THD29"]  # "220kV"
-            # harmonics_data_names = ["500kV", "400kV", "THD29"]  # "220kV"
+            harmonics_data_names = ["500kV", "220kV", "THD29"]  # "110kV"
+            # harmonics_data_names = ["110kV"]  # "220kV"
             # harmonics_data_names = ["500kV", "220kV", "400kV", "THD29"]
             for value_name in tp3_b1_values_rms_names:
                 for harmonic_name in harmonics_data_names:
@@ -262,15 +282,18 @@ if __name__ == '__main__':
                     # data_reader.plot(periods=2, scale_to_v=True)
                     # data_reader.fft(scale_to_v=True)
 
-                    data_float = np.array(data_reader.values).astype(np.float32)
+                    if Config.REVERSE_DATA:
+                        data_float = np.array(data_reader.values).astype(np.float32)
 
-                    dc_offset = np.mean(data_float)
-                    reversed_data_mean = (2 * dc_offset) - data_float
+                        dc_offset = np.mean(data_float)
+                        reversed_data_mean = (2 * dc_offset) - data_float
 
-                    # Convert back to 16-bit integer
-                    reversed_data_mean = np.clip(reversed_data_mean, 0, 65535).astype(np.uint16)
+                        # Convert back to 16-bit integer
+                        final_signal = np.clip(reversed_data_mean, 0, 65535).astype(np.uint16)
+                    else:
+                        final_signal = data_reader.values
 
-                    sp = SignalProcessing(dac_values=reversed_data_mean, adc=adc, sensor=sensor, ad8429=ad8429,
+                    sp = SignalProcessing(dac_values=final_signal, adc=adc, sensor=sensor, ad8429=ad8429,
                                           out_name=name, out_dir=Config.RESULTS_DIR)
                     sp.plot_magnetic_field()
 
