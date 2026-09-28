@@ -126,6 +126,7 @@ if __name__ == "__main__":
     drv425 = DRV425(vcc=Constants.Vcc, R_shunt=100)
 
     ad8429 = AD8429(vs_positive=7.77, vs_negative=-8.5, v_reference=adc.Vcc/2, gain=2, Rg=6.04e3)
+    print(ad8429.G)
     print("AD8429: ")
     print("Vs+ [V]: ", ad8429.Vs_p)
     print("Vs- [V]: ", ad8429.Vs_n)
@@ -134,6 +135,7 @@ if __name__ == "__main__":
     print()
 
     ad8429_g30 = AD8429(vs_positive=8, vs_negative=-8, v_reference=adc.Vcc/2, gain=30, Rg=212.26)
+    print(ad8429_g30.G)
     print("HMC1001: ")
     print("S [mV/mT]: ", hmc1001.S, "; after AD8429: ", hmc1001.S * ad8429_g30.G)
     print("Vout_max [V]: ", hmc1001.Vout_max(Constants.B_max))

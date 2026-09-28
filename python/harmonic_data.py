@@ -285,7 +285,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
 
-    def plot_harmonic_percentages(B1_value, harmonics_dict, THD, plot_name="Widmo harmonicznych"):
+    def plot_harmonic_percentages(B1_value, harmonics_dict, THD, plot_name="Widmo harmonicznych", filename=None):
         """
         Plots the harmonic spectrum as a percentage of the given B1_value with a logarithmic Y-axis.
 
@@ -329,7 +329,10 @@ if __name__ == "__main__":
                      ha='center', va='bottom', fontsize=9, rotation=45)
 
         plt.tight_layout()
-        plt.show()
+        if filename:
+            plt.savefig(filename, dpi=300)
+        else:
+            plt.show()
 
 
     # --- Example Usage ---
@@ -351,20 +354,19 @@ if __name__ == "__main__":
     #                           plot_name="Rozkład harmonicznych pola magnetycznego dla linii 500 kV (pod linią)")
     plot_harmonic_percentages(harmonic_500kV_nT[1], harmonic_500kV_nT,
                               FFT.calculate_thd_from_dict(harmonic_500kV_nT),
-                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 500 kV")
+                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 500 kV", filename="harmonics_500kV.png")
     plot_harmonic_percentages(harmonic_220kv_nT[1], harmonic_220kv_nT,
                               FFT.calculate_thd_from_dict(harmonic_220kv_nT),
-                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 220 kV")
+                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 220 kV", filename="harmonics_220kV.png")
     plot_harmonic_percentages(harmonic_110kv_nT[1], harmonic_110kv_nT,
                               FFT.calculate_thd_from_dict(harmonic_110kv_nT),
-                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 110 kV")
-
+                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 110 kV", filename="harmonics_110kV.png")
 
     plot_harmonic_percentages(harmonic_typical_values[1], harmonic_typical_values, FFT.calculate_thd_from_dict(harmonic_typical_values),
-                              plot_name="Rozkład harmonicznych pola magnetycznego typowy")
-    plot_harmonic_percentages(harmonic_400kV_1_8kA_IV[1], harmonic_400kV_1_8kA_IV,
-                              FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_IV),
-                              plot_name="Rozkład harmonicznych pola magnetycznego dla linii 400 kV")
-    plot_harmonic_percentages(harmonic_IEEE_max_current_distortion[1], harmonic_IEEE_max_current_distortion,
-                              FFT.calculate_thd_from_dict(harmonic_IEEE_max_current_distortion),
-                              plot_name="Rozkład harmonicznych pola magnetycznego dla max IEEE")
+                              plot_name="Rozkład harmonicznych pola magnetycznego o THD=29%", filename="harmonics_thd29.png")
+    # plot_harmonic_percentages(harmonic_400kV_1_8kA_IV[1], harmonic_400kV_1_8kA_IV,
+    #                           FFT.calculate_thd_from_dict(harmonic_400kV_1_8kA_IV),
+    #                           plot_name="Rozkład harmonicznych pola magnetycznego dla linii 400 kV")
+    # plot_harmonic_percentages(harmonic_IEEE_max_current_distortion[1], harmonic_IEEE_max_current_distortion,
+    #                           FFT.calculate_thd_from_dict(harmonic_IEEE_max_current_distortion),
+    #                           plot_name="Rozkład harmonicznych pola magnetycznego dla max IEEE")

@@ -134,7 +134,7 @@ class CalculateSensorParams:
         ax1.plot(self.ref_fundamental, ideal_fit, 'b--', label='Dopasowanie liniowe')
 
         ax1.set_title('Liniowość dla częstotliwości 50 Hz')
-        ax1.set_xlabel('Pole magnetyczne referencyjne 50 Hz RMS [μT]')
+        ax1.set_xlabel('Pole magnetyczne referencyjne RMS [μT]')
         ax1.set_ylabel('Pole magnetyczne zmierzone RMS [μT]')
 
         metrics_text = (f"R² (Determinacja): {self.r_squared:.6f}\n"

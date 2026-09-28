@@ -5,7 +5,8 @@ from measurements.uart import DataReader, UART, Waveform, UartConfig
 from calculations.converter import ADC
 from calculations.helmholtz_coil import DAC, CurrentSource, HelmholtzCoil, HelmholtzCoilReal
 from calculations.sensors import Sensor, AD8429, ALT021, DRV425, DRV5055, HMC1001
-from calculate_sensor_parameters import CalculateSensorParams
+# from calculate_sensor_parameters import CalculateSensorParams
+from calculate_sensivity import CalculateSensorParams
 from calculate_bandwidth import SensorBodeAnalyzer
 from signal_validator import SignalValidator
 from calculate_noise import NoiseAnalyzer
@@ -22,8 +23,8 @@ class Config:
     AD8429_VN = -7.6
     AD8429_V_REF = 3.3 / 2
     # SUT = "ALT021"
-    SUT = "HMC1001"
-    # SUT = "DRV425"
+    # SUT = "HMC1001"
+    SUT = "DRV425"
     # PARENT_DIR = Path(f"final/{SUT}/TP3/")
     PARENT_DIR = Path(f"final/{SUT}/")
     RESULTS_DIR = Path(f"{PARENT_DIR}/RESULTS")
@@ -33,7 +34,7 @@ class Config:
     IN_DIR = Path(f"/in/")
 
     CALIBRATION_DC = 0
-    CALIBRATION = 1
+    CALIBRATION = 0
     CALIBRATION_N = 0
     if CALIBRATION:
         if CALIBRATION_N == 2:
@@ -45,12 +46,12 @@ class Config:
         elif CALIBRATION_N == 5:
             OUT_DIR = Path(f"{PARENT_DIR}/OUT/DC")
     # TEST_PROCEDURE = "TP0"
-    TEST_PROCEDURE = "TP1"
-    # TEST_PROCEDURE = "TP2"
+    # TEST_PROCEDURE = "TP1"
+    TEST_PROCEDURE = "TP2"
     # TEST_PROCEDURE = "TP3"
 
     GENERATE_DATA = 1
-    PROCESS_DATA = 1
+    PROCESS_DATA = 0
     # BS = ""
     # BS = "_BS354"
     # BS = "_BS473"
@@ -65,7 +66,8 @@ class Config:
     # kB = None
     kB = (62.3397 + 62.3421 + 62.25648) / 3
     # S = None
-    # S = 2600
+    S = 131.634 # HMC1001
+    # S = 1643.575 # ALT021
 
 
 def get_sut_name(b_value, k=1, dc=False):
@@ -202,20 +204,21 @@ if __name__ == '__main__':
             ref_harmonic_files_v.append(get_data_file(b_value=b, ref=True, units="voltage_adc", harmonics=True, dc=dc))
 
         if Config.PROCESS_DATA:
-            sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files)
-            params = sensor.calculate_params()
-            print(params)
-            sensor.plot_graphs(filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Bref_uT_{min(b_values)}_{max(b_values)}")
+            # sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files)
+            # params = sensor.calculate_params()
+            # print(params)
+            # sensor.plot_graphs(filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Bref_uT_{min(b_values)}_{max(b_values)}")
 
             sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files_v, ref_harmonics_files=ref_harmonic_files)
             params = sensor.calculate_params()
             print(params)
-            sensor.plot_graphs(y_label="Napięcie na wyjściu czujnika RMS [mV]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Vsensor_mV_Bref_uT_{min(b_values)}_{max(b_values)}")
-            if Config.CALIBRATION:
-                sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files_v)
-                params = sensor.calculate_params()
-                print(params)
-                sensor.plot_graphs(x_label="Napięcie na rezystorze pomiarowym [V]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Vref_V_{min(b_values)}_{max(b_values)}")
+            sensor.plot_graphs(filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Vsensor_mV_Bref_uT_{min(b_values)}_{max(b_values)}")
+            # sensor.plot_graphs(y_label="Napięcie na wyjściu czujnika RMS [mV]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Vsensor_mV_Bref_uT_{min(b_values)}_{max(b_values)}")
+            # if Config.CALIBRATION:
+            #     sensor = CalculateSensorParams(harmonics_files=meas_harmonic_files, ref_harmonics_files=ref_harmonic_files_v)
+            #     params = sensor.calculate_params()
+            #     print(params)
+            #     sensor.plot_graphs(x_label="Napięcie na rezystorze pomiarowym [V]", filename=f"{Config.RESULTS_DIR}/graphs/{Config.SUT}_linearity_Bmeas_uT_Vref_V_{min(b_values)}_{max(b_values)}")
 
     elif Config.TEST_PROCEDURE == "TP2":
         # b_values = [1, 5, 10, 15, 20, 50]
@@ -223,7 +226,9 @@ if __name__ == '__main__':
         b_values = [5, 10, 15, 20]
         # b_values = [5]
         # k_values = [1, 2, 4, 5, 8, 10, 16, 20, 32, 40]
-        k_values = [1, 3, 5, 7, 9, 11, 15, 21, 31, 41, 50]
+        # k_values = [1, 3, 5, 7, 9, 11, 15, 21, 31, 41, 50]
+        # k_values = [1, 3, 5, 7, 9, 11, 15, 21, 31, 41, 50]
+        k_values = [50]
 
         # k_values = [21, 31, 41, 50]
         if Config.GENERATE_DATA:

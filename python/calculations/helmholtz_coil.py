@@ -91,6 +91,7 @@ if __name__ == '__main__':
     dac = DAC(vcc=3.3, resolution_bits=12)
     current_source = CurrentSource(R=7.5, dac=dac, R_divider=1)
     helmholtz_coil = HelmholtzCoil(n=45, R=(8 + 0.4 + 0.15) / 100, current_source=current_source)
+    print("kB [uT/V]: ", helmholtz_coil.B_S*current_source.I_S*1e6)
     print("B (200mA)", helmholtz_coil.B(0.2) * 1e6, " uT")
     print("S_B ", helmholtz_coil.B_S * 1e6/1e3, " uT/mA")
     print("S_I ", helmholtz_coil.I_S * 1e3/1e6, " mA/uT")

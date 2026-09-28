@@ -63,7 +63,7 @@ class SignalProcessing:
                 'harmonic': harmonic_group[0]['harmonic'],
                 'frequency': harmonic_group[0]['frequency'],
                 'rms': np.sqrt(np.mean([h['rms']**2 for h in harmonic_group])),
-                'phase': np.mean([h['phase'] for h in harmonic_group])
+                'phase': np.degrees(np.angle(np.mean(np.exp(1j*np.radians([h['phase'] for h in harmonic_group])))))
             })
         return result_harmonics
 
