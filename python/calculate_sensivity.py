@@ -3,6 +3,7 @@ from measurements.fft import FFT
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 class CalculateSensorParams:
@@ -95,7 +96,7 @@ class CalculateSensorParams:
         self.meas_thd = np.array(meas_t)[order]
 
     # ------------------------------------------------------------ obliczenia
-    def calculate_params(self):
+    def calculate_params(self, filename=None):
         if self.ref_fundamental.size == 0:
             self.load_data()
 
@@ -136,7 +137,7 @@ class CalculateSensorParams:
         if self.s_nominal:
             self.sensitivity_error_pct = (self.sensitivity / self.s_nominal - 1.0) * 100.0
 
-        return {
+        params = {
             "Sensitivity_mV_per_uT": self.sensitivity,
             "Sensitivity_u_mV_per_uT": self.sensitivity_u,
             "Sensitivity_LS_mV_per_uT": self.sensitivity_ls,
@@ -148,8 +149,28 @@ class CalculateSensorParams:
             "Fit_range_uT": self.fit_range,
         }
 
+        if filename:
+            row = {}
+            for key, value in params.items():
+                if key == "Fit_range_uT" and isinstance(value, (tuple, list)) and len(value) == 2:
+                    row["Fit_range_min_uT"] = value[0]
+                    row["Fit_range_max_uT"] = value[1]
+                else:
+                    row[key] = "" if value is None else value
+
+            parent_dir = os.path.dirname(filename)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+
+            with open(filename, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+                writer.writeheader()
+                writer.writerow(row)
+
+        return params
+
     # ---------------------------------------------------------------- wykresy
-    def plot_graphs(self, filename=None):
+    def plot_graphs(self, filename=None, calibration=False):
         if self.sensitivity is None:
             self.calculate_params()
 
@@ -167,7 +188,10 @@ class CalculateSensorParams:
         ax1.axvspan(*self.fit_range, color='blue', alpha=0.05)
         ax1.set_title('Charakterystyka przetwarzania, 50 Hz')
         ax1.set_xlabel('Pole referencyjne 50 Hz RMS [µT]')
-        ax1.set_ylabel('Napięcie wyjściowe czujnika 50 Hz RMS [mV]')
+        if not calibration:
+            ax1.set_ylabel('Napięcie wyjściowe czujnika 50 Hz RMS [mV]')
+        else:
+            ax1.set_ylabel('Napięcie na rezystorze pomiarowym 50 Hz RMS [V]')
         txt = (f"S = {self.sensitivity:.4f} ± {self.sensitivity_u:.4f} mV/µT\n"
                f"R² = {self.r_squared:.6f}\n"
                f"INL = {self.inl_max_pct:.3f} % FS")
@@ -190,7 +214,7 @@ class CalculateSensorParams:
         # --- THD czujnika i referencji
         ax3.plot(b, self.meas_thd, marker='o', color='green', label='THD czujnika')
         ax3.plot(b, self.ref_thd, marker='s', color='gray', linestyle='--', label='THD referencji')
-        ax3.set_title('Liniowość dynamiczna (THD a wartość skuteczna pola)')
+        ax3.set_title('THD a wartość skuteczna pola')
         ax3.set_xlabel('Pole referencyjne 50 Hz RMS [µT]')
         ax3.set_ylabel('THD [%]')
         ax3.set_ylim(bottom=0)
@@ -202,3 +226,48 @@ class CalculateSensorParams:
             plt.savefig(filename, dpi=300)
         else:
             plt.show()
+
+    def save_points_csv(self, filename):
+        """
+        Zapisuje do pliku CSV dane dla każdego punktu pomiarowego:
+        pole referencyjne, napięcie czujnika, THD czujnika, THD referencji
+        oraz względny błąd czułości.
+        """
+        if self.rel_error_pct is None:
+            self.calculate_params()
+
+        parent_dir = os.path.dirname(filename)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+
+        in_fit = (self.ref_fundamental >= self.fit_range[0]) & (self.ref_fundamental <= self.fit_range[1])
+
+        fieldnames = [
+            "B_ref_uT",
+            "V_meas_mV",
+            "In_fit_range",
+            "Sensor_THD_%",
+            "Ref_THD_%",
+            "Rel_sensitivity_error_%",
+        ]
+
+        with open(filename, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for b_val, v_val, fit_flag, m_thd, r_thd, rel_err in zip(
+                    self.ref_fundamental,
+                    self.meas_fundamental,
+                    in_fit,
+                    self.meas_thd,
+                    self.ref_thd,
+                    self.rel_error_pct,
+            ):
+                writer.writerow({
+                    "B_ref_uT": b_val,
+                    "V_meas_mV": v_val,
+                    "In_fit_range": bool(fit_flag),
+                    "Sensor_THD_%": "" if np.isnan(m_thd) else m_thd,
+                    "Ref_THD_%": "" if np.isnan(r_thd) else r_thd,
+                    "Rel_sensitivity_error_%": "" if np.isnan(rel_err) else rel_err,
+                })

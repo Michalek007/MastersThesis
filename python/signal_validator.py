@@ -80,7 +80,7 @@ class SignalValidator:
         return int(round(n_periods * samples_per_period))
 
     def _calculate_time_domain_metrics(self):
-        """Oblicza błędy w dziedzinie czasu (NRMSE, MAXE, e_RMS) po korekcji skali."""
+        """Oblicza błędy w dziedzinie czasu (NRMSE, MAXE, e_RMS) przed i po korekcji skali."""
         B_ref_rms = np.sqrt(np.mean(self.B_ref ** 2))
 
         e_rms_raw = np.sqrt(np.mean(self.e ** 2))
@@ -94,7 +94,9 @@ class SignalValidator:
             'NRMSE_raw': nrmse_raw,                      # [%], bez korekcji
             'alpha': self.alpha,                         # [-]
             'MAXE': np.max(np.abs(self.e_alpha)),        # [uT], po korekcji alfa
+            'MAXE_raw': np.max(np.abs(self.e)),          # [uT], bez korekcji
             'e_RMS': e_rms,                              # [uT], po korekcji alfa
+            'e_RMS_raw': e_rms_raw,                      # [uT], bez korekcji
             'B_ref_RMS': B_ref_rms,                      # [uT]
         }
 
@@ -199,13 +201,14 @@ class SignalValidator:
         :param delimiter: Separator kolumn (';' dla polskiej wersji Excela).
         :param decimal: Separator dziesiętny (',' dla polskiej wersji Excela).
         """
-        columns = ['label', 'NRMSE_perc', 'NRMSE_raw_perc', 'alpha', 'MAXE_uT',
-                   'e_RMS_uT', 'B_ref_RMS_uT', 'THD_ref_perc', 'THD_meas_perc', 'delta_THD_pp']
+        columns = ['label', 'NRMSE_perc', 'NRMSE_raw_perc', 'alpha',
+                   'MAXE_uT', 'MAXE_raw_uT', 'e_RMS_uT', 'e_RMS_raw_uT',
+                   'B_ref_RMS_uT', 'THD_ref_perc', 'THD_meas_perc', 'delta_THD_pp']
         tm, fm = self.time_metrics, self.freq_metrics
         row = [label if label is not None else '',
-               tm['NRMSE'], tm['NRMSE_raw'], tm['alpha'], tm['MAXE'],
-               tm['e_RMS'], tm['B_ref_RMS'],
-               fm['THD_ref'], fm['THD_meas'], fm['THD_meas'] - fm['THD_ref']]
+               tm['NRMSE'], tm['NRMSE_raw'], tm['alpha'],
+               tm['MAXE'], tm['MAXE_raw'], tm['e_RMS'], tm['e_RMS_raw'],
+               tm['B_ref_RMS'], fm['THD_ref'], fm['THD_meas'], fm['THD_meas'] - fm['THD_ref']]
 
         write_header = not (append and os.path.exists(filename))
         mode = 'a' if append else 'w'
@@ -242,8 +245,8 @@ class SignalValidator:
         print("=== Raport walidacji czujnika ===")
         print(f"alpha:      {tm['alpha']:.5f}")
         print(f"NRMSE:      {tm['NRMSE']:.4f} %  (bez korekcji: {tm['NRMSE_raw']:.4f} %)")
-        print(f"MAXE:       {tm['MAXE']:.4f} uT")
-        print(f"e_RMS:      {tm['e_RMS'] * 1000:.2f} nT")
+        print(f"MAXE:       {tm['MAXE']:.4f} uT  (bez korekcji: {tm['MAXE_raw']:.4f} uT)")
+        print(f"e_RMS:      {tm['e_RMS'] * 1000:.2f} nT  (bez korekcji: {tm['e_RMS_raw'] * 1000:.2f} nT)")
         print(f"THD ref / meas: {fm['THD_ref']:.4f} % / {fm['THD_meas']:.4f} %")
         print("---------------------------------")
         print(f"{'h':>3} | {'f [Hz]':>7} | {'ref [%]':>9} | {'meas [%]':>9} | "
@@ -285,6 +288,37 @@ class SignalValidator:
         ax_res.set_xlabel('Czas [ms]')
         ax_res.grid(True, linestyle=':', alpha=0.7)
 
+    def _plot_time_panels_2(self, fig, gs_time, gs_err, periods_to_show):
+        """Przebiegi czasowe B_ref i B_meas oraz błąd całkowity e[n] bez korekcji alfa."""
+        samples_per_period = 1.0 / (self.f0 * self.dt)
+        begin_plot = 2000
+        plot_samples = int(periods_to_show * samples_per_period)
+        plot_samples += begin_plot
+        t_plot = self.t[begin_plot:plot_samples] * 1000  # [ms]
+
+        ax_time = fig.add_subplot(gs_time)
+        ax_res = fig.add_subplot(gs_err, sharex=ax_time)
+
+        ax_time.plot(t_plot, self.B_ref[begin_plot:plot_samples], label=r'$B_{ref}$ (Referencja)',
+                     color='black', linewidth=1.5)
+        ax_time.plot(t_plot, self.B_meas[begin_plot:plot_samples], label=r'$B_{meas}$ (Pomiar)',
+                     color='red', linestyle='--', linewidth=1.5)
+        ax_time.set_ylabel(r'Pole magnetyczne [$\mu$T]')
+        ax_time.set_title(
+            f'Panel 1: Przebiegi czasowe ('
+            f'NRMSE: {self.time_metrics["NRMSE_raw"]:.2f}%, '
+            f'MAXE: {self.time_metrics["MAXE_raw"]:.2f} $\\mu$T)')
+        ax_time.grid(True, linestyle=':', alpha=0.7)
+        ax_time.legend(loc='upper right')
+
+        ax_res.plot(t_plot, self.e[begin_plot:plot_samples], color='blue', linewidth=1)
+        ax_res.fill_between(t_plot, self.e[begin_plot:plot_samples], color='blue', alpha=0.1)
+        ax_res.set_title(
+            f'Błąd chwilowy $e[n]$ ($e_{{RMS}}$: {self.time_metrics["e_RMS_raw"]:.4f} $\\mu$T)')
+        ax_res.set_ylabel(r'Błąd $e[n]$ [$\mu$T]')
+        ax_res.set_xlabel('Czas [ms]')
+        ax_res.grid(True, linestyle=':', alpha=0.7)
+
     def _plot_relative_spectrum(self, ax, title_prefix=''):
         fm = self.freq_metrics
         valid_ref = ~np.isnan(fm['ref_rel_perc'])
@@ -307,22 +341,30 @@ class SignalValidator:
         ax.grid(True, which='both', linestyle=':', alpha=0.7)
         ax.legend(loc='upper right')
 
-    def plot_validation(self, periods_to_show=3, save_path=None):
+    def plot_validation(self, periods_to_show=3, save_path=None, alpha_correction=True):
         """
-        Panel 1: przebiegi czasowe B_ref, B_meas, alpha*B_ref oraz błąd kształtu e_alpha.
+        Panel 1: przebiegi czasowe oraz błąd w dziedzinie czasu (z korekcją alfa lub bez).
         Panel 2: udziały harmonicznych względem składowej podstawowej (skala logarytmiczna).
         """
         fig = plt.figure(figsize=(14, 10))
         gs = GridSpec(3, 1, height_ratios=[2, 1, 2.5])
         gs.update(hspace=0.4)
 
-        self._plot_time_panels(fig, gs[0], gs[1], periods_to_show)
+        if alpha_correction:
+            self._plot_time_panels(fig, gs[0], gs[1], periods_to_show)
+        else:
+            self._plot_time_panels_2(fig, gs[0], gs[1], periods_to_show)
+
         self._plot_relative_spectrum(fig.add_subplot(gs[2]), title_prefix='Panel 2: ')
 
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.tight_layout()
         plt.show()
+
+    def plot_validation_2(self, periods_to_show=3, save_path=None):
+        """Alternatywny wykres walidacji bez korekcji współczynnikiem alfa."""
+        self.plot_validation(periods_to_show=periods_to_show, save_path=save_path, alpha_correction=False)
 
     def plot_validation_legacy(self, periods_to_show=3, save_path=None):
         """Wykres 3-panelowy: przebiegi, widmo amplitudowe, profil błędów harmonicznych."""
@@ -393,4 +435,5 @@ if __name__ == '__main__':
     # validator.save_time_metrics_csv("wyniki/metryki_czasowe.csv", label="ALT021_22uT_110kV", append=True)
     # validator.save_harmonics_csv("wyniki/ALT021_22uT_110kV_harmoniczne.csv")
     # validator.plot_validation(periods_to_show=3, save_path="wyniki/walidacja_zlozona.png")
+    # validator.plot_validation_2(periods_to_show=3, save_path="wyniki/walidacja_bez_alfa.png")
     pass
